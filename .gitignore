@@ -1,0 +1,18 @@
+data/db/
+data/raw/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.env
+
+# Temp diagnostic scripts
+fix_release.py
+check_sbc.py
+check_sbc_text.py
+debug_oop.py
+clear_sbc_fields.py
+export_for_web.py

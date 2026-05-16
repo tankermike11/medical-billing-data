@@ -1,0 +1,802 @@
+﻿Public Data Ingestion Layer
+for AI Medical Billing, Claims Advocacy & EOB Explanation
+Technical PRD v1.1
+Prepared for: Claude Code build
+Status: Build-ready  |  Supersedes v1.0
+1. Executive summary
+This PRD specifies a non-PHI public-data ingestion layer that supplies the reference data required by MASA's AI-assisted medical billing and claims advocacy product. The system normalizes, versions, indexes, and exposes free and publicly accessible healthcare reference data so that downstream AI services can explain EOBs and bills, interpret denial codes, identify a member's plan, look up benefits, surface coverage rules, generate appeal pathways, and ground every user-facing claim in a citable source.
+Changes from v1.0: Adds Good Faith Estimate (GFE) provisions of the No Surprises Act (45 CFR §149.610, §149.620) as a new structured-rule source (E.6), in response to use-case analysis showing ~10% of real-world pain centers on quoted-vs-billed price disputes. Names the specific top-10 states for state-scoped families (Medicaid, state appeals, state surprise billing) based on geographic distribution of the use-case dataset: 
+TX, FL, CA, GA, MI, NY, NC, PA, AZ, IL. Explicit deferral notes added for full HPT/TiC expansion (non-ambulance), detailed commercial coordination-of-benefits rules, and state Medicaid expansion beyond the top 10. Two adjacent product surfaces are flagged as future PRDs and not built here: an itemized-bill-request workflow (follow-on MVP PRD) and a debt-collection-defense product line (separate strategic PRD).
+Scope inherited from v1.0: Plan-side coverage spans ACA Marketplace QHPs, Medicare (Original + Medicare Advantage), Medicaid (top-state subset), and a framework for handling user-uploaded employer-sponsored (ERISA) plan documents. The No Surprises Act and ambulance-specific Medicare sources are P0 because they are directly load-bearing for MASA's ambulance/surprise-bill wedge. A narrow slice of Hospital Price Transparency and payer Transparency in Coverage MRFs—scoped to ambulance HCPCS codes only—is included for negotiated-rate advocacy.
+Architectural posture: This system is the public-data layer only. It does not ingest, store, or process PHI. User-uploaded EOBs, bills, and denial letters are handled in a separate PHI-eligible service that consumes this layer's APIs. This separation is load-bearing for HIPAA posture, the deployment-tier model, and the build plan.
+Build organization: The data sources are grouped into eight extractor families (A–H), each implementable as a self-contained module with a shared source-registry, normalization, and provenance contract. This structure lets Claude Code build, test, and ship each scraper family independently.
+2. Product objective
+Build a programmatic data pipeline that ingests, normalizes, indexes, versions, and exposes free and publicly accessible healthcare reference data to support:
+Plain-English EOB and bill explanation.
+Claim-line interpretation using billing codes (ICD-10-CM, ICD-10-PCS, HCPCS Level II, revenue codes, NDC, place-of-service, modifiers, CARC/RARC denial codes, MS-DRG).
+Plan benefit lookup across Marketplace QHPs, Medicare Advantage, Original Medicare, Medicaid, and user-uploaded ESI documents.
+Deductible, copay, coinsurance, and out-of-pocket maximum explanation grounded in plan documents.
+SBC retrieval, parsing, and structured field extraction.
+Plan-material URL discovery (SBC, network, formulary, brochure).
+Denial triage and appeal-pathway identification, including federal ACA appeals, state appeal processes, Medicare appeals, Medicaid appeals, and No Surprises Act IDR.
+Medical-necessity reasoning grounded in Medicare NCDs/LCDs and top-payer medical policies.
+Network/provider verification using NPPES and machine-readable provider directories.
+Cost-estimate vs. final-bill disputes for uninsured/self-pay patients (Good Faith Estimate dispute resolution under NSA §300gg-136 / 45 CFR §149.620).
+Ambulance-specific advocacy: ambulance HCPCS interpretation, ambulance fee schedules, NCD 10.1 coverage criteria, ambulance modifier interpretation, NSA balance-billing protections, and negotiated-rate context.
+CPT carve-out: Full CPT descriptor ingestion is out of scope because CPT is licensed by the AMA. The system supports CPT-like code detection in user documents and maps to broad service categories using free metadata. If a CPT license is later acquired, ingestion can be added without architectural changes.
+3. Scope
+3.1 In scope — P0 (build first)
+ICD-10-CM and ICD-10-PCS code sets
+HCPCS Level II code set and modifiers (including ambulance origin/destination modifiers)
+CARC (Claim Adjustment Reason Codes) and RARC (Remittance Advice Remark Codes)
+Revenue codes (UB-04 FL42)
+Place of Service codes
+MS-DRG and APR-DRG references
+NDC Directory
+Medicare Ambulance Fee Schedule
+Medicare NCD 10.1 (Ambulance Services) and related ambulance NCDs/LCDs
+No Surprises Act federal rules (balance billing protections, IDR process, QPA methodology, dispute resolution timelines)
+QHP Landscape files, QHP Plan Attributes PUF, QHP Benefits & Cost Sharing PUF, SADP PUF
+Healthcare.gov Marketplace Data API
+Medicare Advantage and Part D Landscape files
+Medicare Coverage Database (NCDs and LCDs, full set)
+NPPES NPI Registry (monthly bulk)
+3.2 In scope — P1 (next)
+ACA Exchange SBC PDFs (crawl, download, parse)
+Medicare Physician Fee Schedule (relevant subset)
+Medicare Claims Processing Manual and Medicare Benefit Policy Manual (key chapters)
+Federal ACA appeal rules (eCFR, CMS guidance)
+Federal Medicare appeals framework (5 levels)
+State Medicaid appeal rules — top 10 states (TX, FL, CA, GA, MI, NY, NC, PA, AZ, IL — see §3.5 for methodology)
+State surprise billing laws — top 10 states (same list; subset have layered protections beyond NSA, see §3.5)
+Good Faith Estimate provisions under NSA (45 CFR §149.610 — provider GFE requirements; 45 CFR §149.620 — Patient-Provider Dispute Resolution)
+Top-payer medical policy crawlers — Aetna, UnitedHealthcare, Cigna, Elevance/Anthem, Humana, BCBS Federal, Kaiser
+NCCI Procedure-to-Procedure and Medically Unlikely Edits
+3.3 In scope — P2
+QHP provider directory JSON files (machine-readable provider directories)
+Medicare Care Compare data (provider quality, hospital ratings)
+Hospital Price Transparency files — ambulance HCPCS only, top-200 hospitals by volume
+Payer Transparency in Coverage MRFs — ambulance HCPCS only, top-5 national payers
+State Medicaid plan benefit documents (top 10 states)
+User-uploaded ESI SBC parsing framework (no central database; document-level extraction only)
+3.4 Explicitly out of scope
+Full licensed CPT codebook ingestion (proprietary; AMA license required).
+Commercial claim-pricing or fee-schedule databases (paid).
+Commercial provider directory aggregators (paid).
+Full Transparency in Coverage MRFs across all codes — explicitly deferred; non-ambulance HPT/TiC expansion is operationally expensive and the volume signal in use-case analysis does not justify the cost at this stage.
+Full Hospital Price Transparency dataset across all hospitals and codes — explicitly deferred for the same reason.
+Detailed commercial coordination-of-benefits (COB) rules — explicitly deferred; Medicare-side COB is derivable from Family C, and commercial COB scenarios in the use-case analysis are <2% of volume. Revisit when application-layer demand justifies.
+State Medicaid coverage expansion beyond the top 10 states — explicitly deferred. The product team will revisit when member density in non-top-10 states meets a defined threshold.
+SERFF policy form ingestion (fragmented and state-by-state; later phase if needed).
+User-uploaded EOBs, bills, and denial letters — these are PHI and belong to a separate document-ingestion PRD. This system never stores PHI.
+Provider-level credentialing data, sanctions data (OIG LEIE etc.) — orthogonal to advocacy scope.
+Itemized-bill-request workflow — not a data-ingestion problem; covered in a separate follow-on MVP product PRD. This system supplies the code-decode infrastructure that the workflow uses once a bill is received.
+Debt-collection-defense workflows (FDCPA validation letters, FCRA credit-bureau disputes, CFPB complaint routing) — covered in a separate strategic product PRD currently in scoping. This system is not the right surface for FDCPA/FCRA workflows.
+3.5 Top-10 state methodology
+The list: TX, FL, CA, GA, MI, NY, NC, PA, AZ, IL.
+How it was selected: The product team analyzed 2,848 real-world use cases captured from Reddit billing/finance subreddits and CFPB medical-debt complaints. State extraction was reliable on CFPB data (99.6% coverage) and limited on Reddit data (~3.5% explicit state mention). Composite ranking weighted surprise-billing-themed cases at 2x. The top 10 by weighted volume is the list above.
+Caveat for Family E.4 (state surprise billing laws): Of these 10 states, six (CA, NY, TX, FL, IL, PA) have meaningful state-level surprise billing protections that layer on top of or extend NSA. The other four (GA, MI, NC, AZ) are effectively NSA-only jurisdictions for surprise billing. For NSA-only states, Family E.4 ingestion is minimal: record that NSA is the operative framework, mark stronger_than_nsa=false, store a citation to the relevant state DOI summary, and move on. The full per-state-statute work concentrates on the six layered-protection states.
+Caveat for Family D (Medicaid) and E.2 (state appeals): All 10 states get full ingestion. Medicaid managed care complexity and state appeal/fair-hearing rule variability are meaningful across all 10.
+Validation gate before kickoff: Before Family D, E.2, and E.4 build, the product team should sanity-check this list against actual or anticipated MASA member geographic distribution. If the member-density distribution diverges materially from the use-case-volume distribution, adjust the list. Reddit's poor state-detection coverage means this list is more confident on the 'where complaints come from' axis than on the 'where MASA members are' axis.
+Note on follow-on product PRDs: Two adjacent product surfaces were identified during use-case analysis and are NOT built in this PRD. (1) Itemized-bill-request workflow — addresses the largest single user need (~18% of analyzed cases) but is procedural/application-layer, not data ingestion. Covered in a follow-on MVP PRD. (2) Debt-collection-defense product line — addresses ~15% of analyzed cases (the FDCPA/FCRA-flavored CFPB complaint pattern). Covered in a separate strategic PRD currently in scoping. Both ride on this data-ingestion layer for code-decode and rule lookups.
+4. Architectural principles
+These principles are load-bearing. Deviation requires explicit review.
+4.1 PHI separation
+This system stores only non-PHI public reference data. User EOBs, bills, denial letters, plan documents uploaded by members, and any data joined to a specific person are processed in a separate PHI-eligible service that consumes this layer's APIs. The two systems run in distinct deployment tiers.
+4.2 Provenance is mandatory
+Every record exposed by the API must trace back to a specific source publisher, source URL, source version, and retrieval timestamp. User-facing answers must be able to cite their source. The provenance schema (see §10) is required across every entity.
+4.3 Versioning never destroys history
+Plan-year data, code-set vintages, and policy versions are immutable once ingested. New versions are appended, never overwritten. A service-date query must resolve to the version of the rule, code, or plan that was effective on that date.
+4.4 Deterministic before LLM
+Field-level facts (code descriptors, deductibles, OOP max, deadlines) are extracted deterministically wherever the source structure allows. LLM-assisted extraction is used only after deterministic methods have been attempted, with explicit confidence scoring and a human review queue for low-confidence outputs.
+4.5 Source-of-truth hierarchy
+When two sources conflict on a fact, the system flags the conflict and prefers official plan documents (SBC, EOC, plan brochure) over derived PUF data for user-facing explanations. Both values are stored and exposed via the API; the calling application makes the final presentation decision.
+4.6 Allowlist-only crawling
+Payer policy, SBC, and provider directory crawling operates against an explicit allowlist of source URLs. The system respects robots.txt and ToS, identifies itself via a documented User-Agent, applies polite rate limiting, and maintains a blocklist of sources that have refused access.
+4.7 Idempotent, restartable ingestion
+Every ingestion job is idempotent: re-running it against an unchanged source produces no diff. Jobs are checkpointed so that partial failures can resume rather than restart. Source artifacts (raw downloads) are persisted before parsing so reprocessing does not require re-fetching.
+5. Compliance and legal posture
+5.1 AMA CPT license
+Full CPT code descriptors are proprietary and licensed by the American Medical Association. This system does not ingest, store, reproduce, or distribute CPT descriptors. The system detects CPT-like 5-digit numeric codes in user-uploaded documents (handled in the separate PHI service), records the code value as observed, and falls back to broad service-category inference using free metadata. Every CPT code response carries a descriptor_source flag with value unavailable_unlicensed and a user-facing caveat. If MASA later acquires a CPT license, a single ingestion module can be added without changes to the data model.
+5.2 Payer policy copyright
+Aetna Clinical Policy Bulletins, UHC Medical Policies, Cigna Coverage Policies, and similar materials are copyrighted by the issuing payer. The system stores extracted criteria for advocacy-support use under a fair-use reading (transformative use, criticism, advocacy support). The system preserves raw source URLs and last-retrieved dates so users can always be directed to the original. Verbatim reproduction of long passages in user-facing output is avoided in favor of summarization with citation.
+5.3 Unauthorized Practice of Law (UPL) and insurance advice
+Generating appeal letters, asserting that a denial is improper, or telling a member that a service should have been covered can cross into UPL and unauthorized insurance advice depending on state and framing. All user-facing outputs that touch these areas must include a disclaimer that the system provides information and self-help support, not legal or licensed insurance advice. Deadline calculations require human review (see §11). The product team must maintain a list of state-by-state framing constraints.
+5.4 HIPAA
+This system is non-PHI by construction. The companion document-ingestion service that handles user EOBs is the HIPAA-covered surface. The architectural boundary between them is enforced via separate deployment, separate credentials, and one-way API access (PHI service calls this system; this system never calls into PHI infrastructure).
+5.5 Crawling, robots.txt, and rate limiting
+All crawlers honor robots.txt, identify themselves via a documented User-Agent string of the form MASA-AdvocacyIngestor/1.0 (+contact_url), apply per-host rate limits, back off on 429/503, and respect Crawl-delay directives. Sources that explicitly disallow access are recorded in a blocklist and not retried. The system supports per-source override only with written legal approval.
+5.6 User-facing disclaimers (required at the AI application layer)
+Information shown is reference data from public sources, not legal or licensed insurance advice.
+Plan benefits, deductibles, and OOP amounts shown should be verified against the member's current plan documents.
+Network status data may be stale; verify directly with the payer and provider before care.
+Appeal deadlines shown are derived from public rules and may not reflect plan-specific or recent regulatory changes; verify before relying on them.
+Coverage determinations require the payer's review of the specific claim; this system does not make coverage decisions.
+6. Key product use cases
+These use cases drive the data requirements that follow. Each one is the responsibility of the downstream AI application; this PRD specifies the data that must be available to serve them.
+6.1 Use Case 1 — Explain claim-line codes
+User input: EOB or bill contains a code of any supported type — ICD-10-CM, ICD-10-PCS, HCPCS Level II, CPT, revenue code, modifier, place-of-service, NDC, MS-DRG, CARC, or RARC.
+System behavior: Detect code type from format. Normalize. Retrieve descriptor and metadata from the appropriate code set. If CPT, return unavailable_unlicensed with category fallback. If CARC/RARC, return human-readable explanation of the denial reason. Link code to benefit category and likely payer policy where applicable.
+Example: "A0428 is a HCPCS Level II ambulance transport code for non-emergency basic life support transport. Coverage typically depends on medical necessity, origin/destination, and whether other transportation would have been unsafe."
+6.2 Use Case 2 — Identify the user's plan
+User input: Plan name, issuer, state, county, ZIP code, metal tier, HIOS plan ID, Medicare Advantage contract/PBP, Medicaid plan, or a plan document.
+System behavior: Route to the correct plan database based on plan type. Resolve to a canonical plan identifier. Return plan metadata, materials URLs, and structured benefits.
+6.3 Use Case 3 — Explain plan benefits
+User question: "Should this have been covered?" or "Why did I owe this much?"
+System behavior: Map service to benefit category. Retrieve structured benefit, cost-sharing, deductible, OOP, and prior-auth fields. Cross-reference with SBC if available. For Medicare, cross-reference with the relevant NCD or LCD. Generate a plain-English explanation with citations.
+6.4 Use Case 4 — Retrieve and parse SBC or plan document
+System behavior: Locate SBC URL from QHP Landscape, Marketplace API, or other plan-material discovery sources. Download the PDF. Extract standardized SBC sections (deductible, OOP max, copay/coinsurance, common medical events, services you may need, excluded services, prior authorization notes, coverage examples). Store raw PDF, extracted text, page-level chunks, and structured fields with per-field confidence scores.
+6.5 Use Case 5 — Identify appeal pathway
+User input: Denial reason (extracted via CARC/RARC and/or denial letter text), plan type, state, date on denial letter.
+System behavior: Determine which appeals framework applies (federal ACA, Medicare 5-level, Medicaid fair hearing, ERISA, NSA IDR, state-specific). Identify the relevant internal vs. external review path. Identify deadline and required next steps. Retrieve the relevant payer medical policy if the denial is medical-necessity, experimental, or PA-related. Generate a checklist and structured appeal package outline.
+6.6 Use Case 6 — Ambulance bill triage (MASA wedge)
+User input: Ambulance bill with HCPCS code (A0425–A0436 range typically), modifier, charge amount, payer, plan type, and event details (emergency vs. non-emergency, origin, destination).
+System behavior: Decode HCPCS and ambulance modifier. Cross-reference with NCD 10.1 medical-necessity criteria. If Medicare or MA, surface Ambulance Fee Schedule rate for the locality. If commercial plan, surface negotiated rate from Hospital Price Transparency or TiC MRF where available. Identify whether the No Surprises Act applies (out-of-network emergency, ground ambulance carve-out specifics, air ambulance protections). Generate an advocacy summary with specific code, modifier, rule citations, and recommended next steps.
+6.7 Use Case 7 — Good Faith Estimate dispute (uninsured / self-pay)
+User input: Uninsured or self-pay patient received a written Good Faith Estimate (GFE) before a scheduled service, and the final billed amount exceeds the GFE for any single provider by $400 or more.
+System behavior: Compare GFE amount(s) to final bill amount(s). Identify whether the $400 threshold for Patient-Provider Dispute Resolution (PPDR) under 45 CFR §149.620 is met. Verify timing: PPDR initiation must occur within 120 calendar days of receipt of the bill. Surface the required GFE content elements (per 45 CFR §149.610) that should have been included, flagging any missing elements as additional advocacy leverage. Identify the convening-provider vs. co-provider distinction if multiple providers are involved. Generate a structured PPDR initiation summary with the citation, the dollar gap, the deadline, the dispute fee, and the SDR (Selected Dispute Resolution entity) submission path.
+Why this matters: Use-case analysis showed ~10% of real-world pain centers on quoted-vs-billed price disputes for uninsured/self-pay scenarios. GFE plus PPDR is the federal regulatory mechanism that directly addresses this. Insured-patient GFE provisions have been deferred by HHS pending rulemaking; this PRD covers the uninsured/self-pay rules that are in effect and will track regulatory updates if insured-patient rules are finalized.
+7. Data sources by extractor family
+Sources are organized into eight families. Each family is implementable as a self-contained module that follows the shared source-registry, ingestion pipeline, normalization, and provenance contracts defined in §§9–10.
+Family A — Code-set bulk-file ingestors
+This family fetches official code-set release files on a scheduled cadence, parses them into a shared canonical schema, detects added/revised/deleted codes, and exposes lookup and search APIs. All sources in this family are P0.
+Family B — Marketplace QHP data ingestor
+This family covers ACA Marketplace plan data: the QHP Landscape files, Plan Attributes PUF, Benefits & Cost Sharing PUF, SADP PUF, and the Healthcare.gov Marketplace API. These are the structured backbone for ACA plan lookup, plan-material discovery, and benefit/cost-sharing reasoning. All P0.
+Family C — Medicare data ingestor
+This family adds Medicare coverage to the plan-side data model. It covers Medicare Advantage and Part D Landscape files, the Medicare Coverage Database (NCDs and LCDs), the Medicare Ambulance Fee Schedule and Physician Fee Schedule, and the Medicare Claims Processing and Benefit Policy Manuals. NCD 10.1 (Ambulance) and the Ambulance Fee Schedule are P0 because of MASA's wedge.
+Family D — Medicaid data ingestor
+Medicaid is administered state-by-state, so the ingestion approach is necessarily state-by-state. P0 scope is limited to the top 10 states by MASA member density (defined by the product team), focusing on Medicaid Managed Care plan documents and Medicaid appeal/fair-hearing rules. National Medicaid Statistical Information System (T-MSIS) data is out of scope.
+Family E — Regulatory rules ingestor
+This family ingests appeal rules and balance-billing/surprise-billing rules from federal and state sources. The No Surprises Act is elevated to P0 because of MASA's wedge.
+Family F — SBC PDF crawler and parser
+SBCs are standardized Summary of Benefits and Coverage documents under the ACA. URLs are discovered via QHP Landscape (medical) and analogous Medicare Advantage and Medicaid sources where applicable. Employer-sponsored SBCs do not have a central registry; for those, this family exposes a parser that operates on user-uploaded PDFs (called from the separate PHI service).
+Family G — Payer medical policy crawler
+Payer medical policies define when services are medically necessary, experimental, or subject to prior authorization. Critical for medical-necessity denial advocacy. P1 scope is the top 7 national payers; expand to regional payers and BCBS state plans in P2.
+Family H — Provider and network data ingestor
+Family I — Price transparency (ambulance HCPCS only)
+Hospital Price Transparency files and payer Transparency in Coverage MRFs are deferred at the full-dataset level due to operational cost, but a narrow slice — restricted to ambulance HCPCS codes — is included to enable negotiated-rate context in ambulance bill advocacy. Scope: top-200 U.S. hospitals by ambulance volume (HPT) and top-5 national payers (TiC), filtered to A0021–A0999 HCPCS codes.
+8. Core data model
+Entities span code sets, plans, plan materials, regulatory rules, payer policies, and providers. Every entity carries the standard provenance fields defined in §10.
+8.1 Entities
+Source — dataset definition and metadata in the source registry.
+DatasetRelease — a specific versioned release of a Source.
+Code — generic code entity, subclassed by code_type (ICD10CM, ICD10PCS, HCPCS, CPT, CARC, RARC, RevenueCode, POS, Modifier, MS-DRG, NDC).
+CodeRelationship — hierarchy and crosswalk edges (ICD parent/child, NCCI PTP pairs).
+Plan — abstract plan entity with plan_type subclass (MarketplaceQHP, MedicareAdvantage, MedicarePartD, OriginalMedicare, MedicaidMCO, ESI).
+PlanVariant — for plans with CSR variants or PBP segments.
+PlanBenefit — benefit-level cost-sharing row.
+PlanAttribute — plan-level deductible/OOP/HSA attributes.
+PlanMaterial — references to SBC, network, formulary, brochure URLs.
+SBCDocument — extracted SBC with structured fields and raw PDF reference.
+SBCExtractedField — per-field extraction with confidence and provenance.
+Issuer / Payer — corporate entity issuing plans / underwriting claims.
+PayerPolicy — payer medical policy with extracted criteria.
+AppealRule — structured appeal rule by jurisdiction and plan type.
+BalanceBillingRule — NSA and state surprise-billing protections.
+CoverageDetermination — NCDs and LCDs.
+FeeScheduleRate — locality-adjusted rate per code (ambulance fee schedule, MPFS).
+Provider — provider from NPPES.
+Network — payer-defined network.
+NetworkProvider — plan-provider relationship from machine-readable directories.
+PriceTransparencyRate — hospital and payer-side rates for ambulance HCPCS.
+Jurisdiction — federal / state / Medicare / Medicaid.
+ExtractionJob — pipeline-run record.
+ExtractionError — error record from a job.
+ReviewQueueItem — item awaiting human review.
+8.2 Key relationships
+Plan 1—many PlanVariant
+PlanVariant 1—many PlanBenefit
+PlanVariant 1—1 PlanAttribute
+Plan 1—many PlanMaterial
+PlanMaterial 1—0..1 SBCDocument
+SBCDocument 1—many SBCExtractedField
+Issuer 1—many Plan
+Payer 1—many PayerPolicy
+PayerPolicy many—many Code (via code references)
+Network many—many Provider (via NetworkProvider)
+AppealRule belongs_to Jurisdiction
+BalanceBillingRule belongs_to Jurisdiction
+CoverageDetermination references Code(s)
+FeeScheduleRate references Code and Locality
+PriceTransparencyRate references Code, Provider, and Payer (where in-network rate)
+Code is_used_by PlanBenefit, PayerPolicy, CoverageDetermination, FeeScheduleRate, PriceTransparencyRate, and (via the PHI service) UserClaimLine
+9. API requirements
+APIs return JSON, are versioned, and always include a provenance block. Every endpoint that returns substantive data is rate-limited and authenticated.
+9.1 Code lookup
+Example response shape:
+9.2 Plan search and lookup
+9.3 SBC
+9.4 Appeals and rules
+9.5 Payer policies
+9.6 Medicare coverage and rates
+9.7 Provider and network
+9.8 Price transparency (ambulance slice)
+9.9 Universal response wrapper
+Every response is wrapped in this envelope:
+10. Standard ingestion pipeline
+10.1 Source registry
+A central registry defines every source. Each entry includes:
+source_id (stable identifier)
+publisher
+canonical_url and any mirror URLs
+format (csv / xlsx / xml / json / pdf / html / api)
+expected_schema (with version)
+refresh_cadence
+extraction_method (bulk_file / rest_api / web_scrape / pdf_parse)
+license and posture notes
+owner (engineering team)
+phi_status (always non-PHI in this layer)
+robots_txt_status
+user_agent_to_use
+10.2 Standard ingestion flow
+Read source registry entry.
+Fetch source file or API response.
+Store raw artifact in object storage with SHA-256 hash.
+Compare hash against last successful run; skip if unchanged.
+Detect schema; fail fast if schema-version mismatch.
+Parse into staging tables.
+Validate required columns and field types.
+Normalize fields (currency to cents, dates to ISO 8601 UTC, codes to canonical form, URLs validated).
+Run entity matching against existing records.
+Append a new DatasetRelease record; never overwrite prior versions.
+Publish to production tables (transactional swap or versioned read alias).
+Build/refresh search index entries.
+Generate ingestion report: row counts, diff vs. prior, anomalies, errors, time elapsed.
+Alert on threshold breaches (see §11).
+10.3 Refresh cadence by source
+Source family
+Cadence
+ICD-10-CM / PCS
+Annual + midyear check
+HCPCS Level II
+Quarterly + mid-quarter check
+CARC / RARC
+On WPC release (3x/year) + monthly check
+Revenue codes / POS / Modifiers
+Quarterly check
+MS-DRG
+Annual (FY)
+NDC Directory
+Weekly
+QHP PUFs (Plan Attributes, BenCS, SADP)
+Annual + monthly during release season
+QHP Landscape
+Annual + monthly during release season
+Marketplace API
+Live (cached)
+MA / Part D Landscape
+Annual + monthly during enrollment
+Medicare NCDs / LCDs
+Monthly check
+Medicare Ambulance Fee Schedule / MPFS
+Annual + quarterly
+Medicare Manuals
+Monthly check (transmittal-driven)
+NCCI edits
+Quarterly
+NPPES bulk
+Monthly + weekly deactivation
+SBC PDFs
+Annual full crawl + quarterly URL check
+Appeal rules (federal + state)
+Quarterly check
+NSA + state balance-billing
+Quarterly check
+GFE / PPDR rules + SDR list + admin fee
+Quarterly check; monthly during regulatory transition periods
+Payer policies (top 7)
+Monthly
+Provider directories
+Monthly where API-driven
+Price transparency — ambulance slice
+Monthly (TiC); annual (HPT)
+11. Data quality and human review
+11.1 Validation checks
+Check
+Requirement
+Row count drift
+Alert if source row count changes more than ±5% versus prior run.
+Required columns
+Fail ingestion if any required column missing.
+Code format
+Validate ICD/HCPCS/NPI/HIOS/NDC against expected regex/checksum.
+Currency parsing
+All currency stored as integer cents; explicit null distinguished from zero.
+URL validation
+HTTP status, redirect chain, content-type recorded for every URL.
+Duplicate detection
+Detect duplicate plan-benefit, code, or rule rows; fail on unexpected duplicates.
+Versioning
+Never overwrite prior plan-year or release data.
+Source provenance
+Every user-facing fact has source_publisher, source_url, source_version, source_retrieval_ts.
+Extraction confidence
+Required for SBC, policy, and rule extraction; routed to review if below threshold.
+Schema drift
+Compare incoming schema against expected; fail fast on unexpected fields or missing fields.
+Hash drift on stable sources
+If a 'stable' source (e.g., POS codes) changes hash unexpectedly, flag for review.
+11.2 Human review queue triggers
+Items are routed to the review queue when:
+Appeal deadline is extracted from unstructured legal text.
+Balance-billing rule is extracted from state statute.
+SBC extraction confidence is below threshold on any required field.
+Payer medical policy criteria will be used in user-facing appeal generation.
+Network status is ambiguous (e.g., NPI appears in one directory but not another).
+Source data conflicts across PUF, SBC, and issuer plan materials.
+Plan year mismatch exists between plan material and structured data.
+Coverage determination text changes meaningfully between versions.
+Schema drift is detected on a stable source.
+11.3 Provenance schema (universal)
+Every record exposed via the API must carry:
+12. AI / LLM requirements
+12.1 Where LLM is used in this layer
+Extracting structured criteria from unstructured payer policy and rule text after deterministic methods have been attempted.
+Classifying SBC sections and tables.
+Generating concise, citation-anchored summaries of long medical policies and rule text for the AI application to consume.
+Mapping messy benefit_name strings to canonical benefit taxonomy.
+Parsing low-quality SBC PDFs after native and OCR extraction have produced low-confidence results.
+12.2 Where LLM is NOT the sole source
+LLMs must not be the sole source for any of the following:
+Code descriptors (use the official code-set ingestion).
+Plan deductibles, OOP maxima, copay/coinsurance amounts (use PUFs and SBCs).
+Appeal deadlines (human-reviewed structured rules only).
+Coverage determinations (use NCDs/LCDs and plan documents).
+Network status (use machine-readable directories).
+Medical necessity rules used in user-facing appeal generation (use extracted criteria with citation).
+12.3 Required output structure (AI application layer, not this layer)
+This is a contract specification for the downstream AI application that consumes this layer's APIs. Every user-facing answer should include:
+What we found (the underlying facts pulled from this layer).
+What it likely means (interpretation).
+Source citations (drawn from the provenance block).
+Confidence level (per relevant field).
+What still needs verification (gaps and stale-data warnings).
+Recommended next step (action the member can take).
+13. Phased build plan
+13.1 Phase 1 — Code spine and ambulance wedge (weeks 1–6)
+Goal: Stand up the code-set foundation plus the ambulance-specific surfaces that anchor MASA's wedge.
+Source registry, ingestion framework, provenance schema, base storage stack.
+Family A — all eleven code sets ingested (ICD-10-CM, ICD-10-PCS, HCPCS, CPT detection, CARC, RARC, Revenue, POS, Modifiers, MS-DRG, NDC).
+Family C — Medicare Ambulance Fee Schedule and NCD 10.1 ingested. Ambulance-related LCDs ingested.
+Family E — No Surprises Act federal provisions structured.
+Family H.1 — NPPES bulk ingested.
+Code lookup API endpoints live.
+Ambulance bill triage endpoint live: ambulance HCPCS + modifier decode + fee schedule + NCD reference + NSA flag.
+13.2 Phase 2 — Plan spine (weeks 7–12)
+Goal: Add Marketplace, Medicare Advantage, and Medicaid plan data.
+Family B — QHP Landscape, Plan Attributes PUF, BenCS PUF, SADP PUF, Healthcare.gov Marketplace API.
+Family C.4 — MA and Part D Landscape ingested.
+Family D.1 — Top-10-state Medicaid MCO benefit documents (TX, FL, CA, GA, MI, NY, NC, PA, AZ, IL) using LLM-assisted extraction with human review.
+Plan search and plan lookup endpoints live across plan types.
+13.3 Phase 3 — Plan documents (weeks 13–18)
+Goal: Attach SBC and EOC parsing to structured plan data.
+Family F.1 — Marketplace SBC crawler, downloader, extraction cascade, human review console.
+Family F.2 — Stateless SBC parse endpoint for the PHI service.
+Standard SBC field extractor and section index live.
+Broken-link report live.
+13.4 Phase 4 — Rules and policies (weeks 19–24)
+Goal: Support denial triage, appeal guidance, and cost-estimate dispute resolution.
+Family E.1 — Federal ACA appeal rules.
+Family E.2 — Top-10-state appeal and fair-hearing rules (TX, FL, CA, GA, MI, NY, NC, PA, AZ, IL).
+Family E.4 — Top-10-state surprise billing laws (same list; six have layered protections, four are NSA-only).
+Family E.5 — Federal Medicare appeals framework.
+Family E.6 — Good Faith Estimate + PPDR (uninsured/self-pay).
+Family G.1 — Top-7-payer commercial medical policy crawlers.
+Family C.1 — Full NCD/LCD ingestion expansion beyond ambulance.
+Family C.6 — NCCI edits.
+Family C.5 — Medicare manuals (ambulance chapters at P0; remainder here).
+Human review console expanded for rules and policies (including GFE dollar thresholds and PPDR fees).
+13.5 Phase 5 — Networks and price transparency (weeks 25–30)
+Goal: Support network reasoning and ambulance negotiated-rate context.
+Family H.2 — QHP machine-readable provider directories.
+Family H.3 — Medicare Care Compare.
+Family I.1 — Hospital Price Transparency, ambulance HCPCS, top-200 hospitals.
+Family I.2 — Payer TiC MRFs, ambulance HCPCS, top-5 payers.
+Family D.2 — Medicaid appeal rules (cross-listed reinforcement).
+14. Eval and test framework
+Because user-facing advocacy outputs will get cited back to payers, members, and possibly regulators, every scraper and every API endpoint must have an automated test suite. Claude Code is expected to scaffold these alongside the extractors.
+14.1 Test categories
+Schema tests — every parser is exercised against fixture files captured from real source releases; field-by-field equality asserted.
+Drift tests — when a new source release is ingested, a drift report flags fields that changed value in a way inconsistent with normal year-over-year evolution.
+Lookup tests — golden test cases per code set (e.g., A0428 → 'BLS non-emergency transport'); regression-tested on every build.
+Plan lookup tests — fixtures of state+county+plan_year queries with expected plan ID sets.
+SBC extraction tests — a fixture set of representative SBC PDFs with manually-verified extracted field values; field-level accuracy thresholds enforced.
+Appeal rule tests — golden cases of denial scenario + plan type + state → expected appeal pathway and deadline.
+GFE / PPDR tests — fixture cases of GFE amounts + final bills + dates → expected PPDR eligibility, threshold gap, days remaining, and current SDR fee.
+Ambulance triage end-to-end tests — fixture EOB lines (synthesized, non-PHI) with HCPCS + modifier + payer + state, expected to produce a known triage output.
+14.2 Eval cadence
+Per-build: full schema and lookup test suites.
+Per-source-release: drift tests against the new release.
+Weekly: full extraction-confidence sample audit against the human review queue.
+Monthly: end-to-end triage eval against the golden ambulance fixture set.
+15. Risks and mitigations
+Risk
+Impact
+Mitigation
+CPT licensing limitation
+High
+Do not ingest CPT descriptors; CPT detection-only with category fallback. License later if business case supports it.
+SBC PDF extraction errors
+High
+Cascade extraction; per-field confidence; human review queue; preserve raw PDF with hash for citation.
+Plan ID join failures across PUF + Landscape + SBC
+High
+Normalize HIOS to canonical 14-char form; multi-key matching on issuer + state + plan_year + variant; explicit unmatched-row report.
+PUF vs. SBC conflict on a benefit value
+Medium
+Store both; flag conflict; default to SBC for user-facing explanation (issuer-published material outranks derived PUF).
+Provider directory staleness
+High
+Display staleness warning in every API response; recommend payer/provider verification before care; do not use stale directory data as the sole basis for a network claim.
+Appeal deadline extraction errors
+High
+Human review required for every deadline before user-facing publication; user-facing output always includes a 'verify the deadline' caveat.
+Payer policy fragmentation
+Medium
+Start with top 7 payers and high-frequency denial categories. Expand opportunistically.
+State rule variability
+Medium
+Start federal; layer in top-10 states. Track gaps explicitly.
+NSA ground-ambulance carve-out misinterpretation
+High
+Model the carve-out explicitly with category-specific flags; surface state-specific protections that fill the gap.
+GFE rule volatility (PPDR fee, SDR list, potential insured-patient expansion)
+Medium
+Quarterly refresh on GFE family; track effective date on every dollar value; preserve historical fee versions for retrospective dispute calculations.
+GFE deadline miscalculation (120-day PPDR initiation)
+High
+Human review on every deadline value before user-facing publication; user-facing output always carries a 'verify with current CMS guidance' caveat; deadline math expressed as a verifiable calculation showing inputs.
+Crawler blocked by source
+Medium
+Maintain blocklist; do not retry blocked sources; route to manual export workflow if business-critical.
+Payer policy copyright exposure
+Medium
+User-facing output uses summarization with citation, not verbatim long passages; preserve source URL for redirect.
+UPL / unauthorized insurance advice
+High
+Disclaimers required at application layer; deadline calculations require human review; advocacy framing reviewed by counsel.
+Price transparency volume
+Medium
+Ambulance-HCPCS scoping makes volume tractable; consider further narrowing to top-3 payers if needed.
+Source URL drift (CMS reorganizations)
+Medium
+Source registry centralizes URLs; weekly URL-health check; archive copy of every ingested file via SHA-256 retention.
+16. Success metrics
+16.1 Data coverage
+Metric
+Target
+ICD-10 latest-year ingestion success
+100%
+HCPCS quarterly ingestion success
+100%
+CARC / RARC ingestion freshness
+100% within 7 days of WPC release
+QHP PUF ingestion success
+100% for current plan year
+QHP Landscape ingestion success
+100% for current plan year
+MA / Part D Landscape ingestion success
+100% for current plan year
+NPPES freshness
+≤30 days from latest CMS release
+Ambulance Fee Schedule freshness
+≤14 days from CMS release
+SBC URL retrieval success
+≥85% of Marketplace medical plans
+SBC structured extraction confidence
+≥80% high-confidence on required fields
+Plan ID join success across PUF + Landscape
+≥95%
+NCD/LCD ambulance coverage
+100% of ambulance NCDs and ambulance-applicable LCDs
+Top-7 payer policy index coverage
+≥90% of public commercial-line policies
+Top-10-state appeal rules
+100% with human review
+Top-10-state surprise billing laws
+100% with human review
+GFE / PPDR rule structuring
+100% with human review; current SDR fee within 90 days of CMS update
+NPPES bulk freshness
+Monthly
+Price transparency ambulance slice — HPT top-200 hospitals
+≥70% successful
+Price transparency ambulance slice — TiC top-5 payers
+100% attempted, ambulance-HCPCS rows extracted
+16.2 Product utility
+Metric
+Target
+Code explanation coverage for EOB lines (excluding CPT)
+≥95%
+Code explanation coverage including CPT (with category fallback)
+100% via fallback; ≥40% with confident category
+CARC + RARC denial-code explanation coverage
+≥95% with curated map on top 50/30 codes
+Marketplace plan lookup success (state + issuer + plan name)
+≥90%
+Medicare Advantage plan lookup (state + county + plan name)
+≥85%
+Benefit explanation success for common services
+≥80%
+Appeal pathway coverage
+Federal + Medicare + Medicaid (top 10) + Marketplace (top 10 states)
+GFE/PPDR eligibility endpoint correctness
+100% on golden fixture set covering threshold edge cases and date-arithmetic edge cases
+Ambulance triage end-to-end success
+≥85% on golden fixture set
+Negotiated-rate citation coverage for ambulance bills
+≥40% of common scenarios in top-200 hospitals
+17. Build manifest for Claude Code
+This is the concrete build checklist. Each item is a self-contained module; each module has its own scraper, parser, normalizer, storage adapter, API handler, and test suite.
+17.1 Shared infrastructure (build first)
+Source registry module (CRUD on Source entries).
+Ingestion framework (download → hash → store → parse → normalize → validate → publish, with checkpointing).
+Provenance schema (universal mixin applied to every entity).
+Storage adapters: PostgreSQL for structured tables; object storage for raw artifacts; full-text search; vector store for semantic search over policy/SBC text.
+URL validator with redirect tracking and content-type recording.
+Currency parser to integer cents with null handling.
+Date parser to ISO 8601 UTC.
+PDF extraction cascade (native → OCR → LLM-assisted).
+Human review console.
+API gateway with rate limiting, auth, and universal response envelope.
+Eval/test harness with fixture management.
+17.2 Scraper / extractor modules (one per source)
+Each module follows the same shape:
+module: ingestors/<source_id>/
+files: fetch.py (download), parse.py (parse to staging), normalize.py (to canonical), validate.py (checks), publish.py (write to production), tests/ (fixtures + assertions).
+registered in: source_registry.yaml with cadence, schema_version, owner, and phi_status.
+Build order (mirrors §13 phasing):
+P0: A.1 icd10cm, A.2 icd10pcs, A.3 hcpcs, A.4 cpt_handling, A.5 carc, A.6 rarc, A.7 revenue, A.8 pos, A.9 modifiers, A.10 ms_drg, A.11 ndc
+P0: C.1 mcd (ambulance scope first), C.2 ambulance_fee_schedule, E.3 nsa, H.1 nppes
+P0: B.1 qhp_landscape, B.2 plan_attributes_puf, B.3 bencs_puf, B.4 sadp_puf, B.5 marketplace_api, C.4 ma_partd_landscape
+P1: D.1 state_medicaid_mco (per-state adapters), F.1 sbc_marketplace, F.2 sbc_parse_endpoint
+P1: E.1 federal_aca_appeals, E.2 state_appeals (per-state adapters), E.4 state_balance_billing, E.5 medicare_appeals, E.6 gfe_ppdr
+P1: G.1 payer_policy (per-payer adapters), C.1 mcd_full, C.6 ncci, C.5 medicare_manuals
+P2: H.2 qhp_provider_directory, H.3 care_compare, I.1 hpt_ambulance, I.2 tic_ambulance
+17.3 Repository structure (recommended)
+17.4 Acceptance gates per phase
+Phase 1 (code + ambulance): all P0 code-set lookups return correct descriptors against golden test set; ambulance triage endpoint produces correct triage on fixture set with ≥85% accuracy.
+Phase 2 (plan spine): plan search returns correct plans for the fixture state+county+year queries across Marketplace, MA, Medicaid.
+Phase 3 (SBC): SBC field extraction confidence ≥80% on a fixture set of 50 representative SBCs.
+Phase 4 (rules): every appeal rule and balance-billing rule passes human review before being marked production-ready.
+Phase 5 (network + price): network lookup returns provider directory matches with NPPES cross-reference for top-7 payers; ambulance-HCPCS rates retrievable for ≥70% of top-200 hospitals.
+Appendix A — Free-data inclusion decision table
+Dataset
+Include?
+Priority
+Rationale
+ICD-10-CM
+Yes
+P0
+Public; essential for diagnosis explanation
+ICD-10-PCS
+Yes
+P0
+Public; inpatient procedure explanation
+HCPCS Level II
+Yes
+P0
+Public; load-bearing for ambulance/DME/drugs
+CPT
+Detection only
+P0 limited
+Proprietary; do not ingest descriptors
+CARC
+Yes
+P0
+Public; essential for denial explanation
+RARC
+Yes
+P0
+Public; essential for denial explanation
+Revenue codes
+Yes
+P0
+Assembled from public refs; UB-04 explanation
+Place of Service
+Yes
+P0
+Public; small but referenced often
+HCPCS modifiers (incl. ambulance)
+Yes
+P0
+Public; ambulance modifier decode is core
+MS-DRG
+Yes
+P0
+Public; inpatient claim explanation
+NDC Directory
+Yes
+P0
+Public; drug-line explanation
+NCCI edits
+Yes
+P1
+Public; unbundling-denial explanation
+Medicare NCDs/LCDs
+Yes
+P0 ambulance / P1 full
+Public; medical-necessity reasoning
+Medicare Ambulance Fee Schedule
+Yes
+P0
+Public; ambulance wedge
+Medicare MPFS (subset)
+Yes
+P1
+Public; outpatient bill explanation
+Medicare Manuals (ambulance chapters)
+Yes
+P0
+Public; operational rules
+MA + Part D Landscape
+Yes
+P0
+Public; Medicare plan lookup
+QHP Landscape
+Yes
+P0
+Public; Marketplace plan discovery
+QHP Plan Attributes PUF
+Yes
+P0
+Public; deductible/OOP source of truth
+QHP BenCS PUF
+Yes
+P0
+Public; benefit cost-sharing source
+SADP PUF
+Yes
+P0
+Public; dental plan completeness
+Marketplace API
+Yes
+P0
+Public; live supplement to PUFs
+State Medicaid MCO benefits (top 10)
+Yes
+P1
+Public; state-by-state
+ACA Exchange SBCs
+Yes
+P1
+Public; consumer-readable plan evidence
+ESI SBC parsing
+Yes (user-uploaded)
+P2
+No central registry; document-level only
+Federal ACA appeals
+Yes
+P1
+Public; foundational
+State appeals (top 10)
+Yes
+P1
+Public; per-state adapters
+Medicare appeals (5 levels)
+Yes
+P1
+Public
+No Surprises Act
+Yes
+P0
+Public; ambulance/ER wedge
+GFE + PPDR (uninsured/self-pay)
+Yes
+P1
+Public; addresses cost-estimate-dispute (~10% of analyzed volume)
+State surprise billing (top 10)
+Yes
+P1
+Public; fills NSA gaps where states have layered protections (CA, NY, TX, FL, IL, PA among top 10)
+Top-7 payer medical policies
+Yes
+P1
+Public; medical-necessity denial support
+NPPES NPI Registry
+Yes
+P0
+Public; provider source of truth
+QHP provider directory JSON
+Yes
+P2
+Public; quality varies
+Medicare Care Compare
+Yes
+P2
+Public; advocacy context
+Hospital Price Transparency (ambulance, top-200)
+Yes (scoped)
+P2
+Public; negotiated-rate context
+Payer TiC MRFs (ambulance, top-5)
+Yes (scoped)
+P2
+Public; negotiated-rate context
+Full CPT codebook
+No
+—
+AMA-licensed; do not ingest
+Commercial claim-pricing DBs
+No
+—
+Paid
+Commercial provider directory aggregators
+No
+—
+Paid
+Full TiC MRFs (all codes)
+No — explicitly deferred
+—
+Operationally expensive; use-case volume does not justify
+Full HPT (all hospitals/codes)
+No — explicitly deferred
+—
+Same as above
+Detailed commercial COB rules
+No — explicitly deferred
+—
+<2% of analyzed use-case volume; revisit when application demand justifies
+State Medicaid expansion beyond top 10
+No — explicitly deferred
+—
+Revisit when member density meets defined threshold
+SERFF policy forms
+No (later phase)
+—
+Fragmented; not load-bearing
+User EOBs/bills/denial letters
+No
+—
+PHI; separate document-ingestion PRD
+Itemized-bill-request workflow
+No — separate PRD
+—
+Procedural/application-layer; follow-on MVP product PRD
+Debt-collection-defense workflows
+No — separate PRD
+—
+FDCPA/FCRA workflows; separate strategic product PRD
+Appendix B — Architectural separation (textual)
+Two systems, one-way dependency:
+┌───────────────────────────────────────────────────────────┐
+│  PUBLIC DATA LAYER  (this PRD — Tier 0/1, non-PHI)         │
+│                                                            │
+│  • Source registry                                         │
+│  • Family A — Code sets                                    │
+│  • Family B — Marketplace QHP                              │
+│  • Family C — Medicare                                     │
+│  • Family D — Medicaid (top 10 states)                     │
+│  • Family E — Regulatory rules (NSA, appeals, GFE/PPDR)    │
+│  • Family F — SBC documents                                │
+│  • Family G — Payer policies                               │
+│  • Family H — Provider / network                           │
+│  • Family I — Price transparency (ambulance slice)         │
+│                                                            │
+│  Exposes:                                                  │
+│   - /codes/*          - /medicare/*                        │
+│   - /plans/*          - /nsa/*                             │
+│   - /sbc/*            - /gfe/*                             │
+│   - /appeals/*        - /providers/*                       │
+│   - /payer-policies/* - /network/*                         │
+│   - /state-balance-billing/*  - /price-transparency/*      │
+│                                                            │
+│  Never stores PHI.                                         │
+└───────────────────────────────────────────────────────────┘
+                              ▲
+                              │  one-way API calls
+                              │  (PHI service consumes
+                              │  public-data APIs)
+                              │
+┌───────────────────────────────────────────────────────────┐
+│  PHI DOCUMENT SERVICE  (separate PRD — Tier 2/3, HIPAA)    │
+│                                                            │
+│  • Ingests user EOBs, bills, denial letters                │
+│  • Detects code values in user documents                   │
+│  • Calls /sbc/parse (stateless) for user-uploaded SBCs     │
+│  • Calls public-data APIs for descriptors, rules, etc.     │
+│  • Composes user-facing advocacy responses                 │
+│                                                            │
+│  Never has direct access to public-data infrastructure.    │
+└───────────────────────────────────────────────────────────┘
+This separation is enforced at deployment via distinct credentials, distinct VPCs/projects, and one-way network rules. The public-data layer never reaches into the PHI environment.

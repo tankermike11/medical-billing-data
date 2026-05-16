@@ -1,0 +1,216 @@
+sources:
+
+  # ── Family A: Code sets ─────────────────────────────────────────────────────
+
+  - source_id: a01_icd10cm
+    publisher: CMS
+    canonical_url: "https://www.cms.gov/files/zip/2025-code-descriptions-tabular-order.zip"
+    # VERIFY: Updated from the -updated-01012025 variant which 404'd. Confirm this URL resolves.
+    # Landing page: cms.gov/medicare/coding-billing/icd-10-codes/2025-icd-10-cm
+    format: zip
+    extraction_method: bulk_file
+    refresh_cadence: annual
+    phi_status: non-phi
+    license: public_domain
+    robots_txt_status: allowed
+    user_agent: MASA-AdvocacyIngestor/0.1-pilot
+
+  - source_id: a02_icd10pcs
+    publisher: CMS
+    canonical_url: "https://www.cms.gov/files/zip/2025-icd-10-pcs-code-tables-and-index.zip"
+    # Contains icd10pcs_tables_2025.xml — ingestor parses XML directly to enumerate all codes.
+    # Falls back to icd10pcs_order_*.txt fixed-width format if present in the ZIP.
+    format: zip
+    extraction_method: bulk_file
+    refresh_cadence: annual
+    phi_status: non-phi
+    license: public_domain
+    robots_txt_status: allowed
+    user_agent: MASA-AdvocacyIngestor/0.1-pilot
+
+  - source_id: a03_hcpcs
+    publisher: CMS
+    canonical_url: "https://www.cms.gov/files/zip/october-2025-alpha-numeric-hcpcs-file.zip"
+    # October 2025 quarterly update file (most current available). Contains the full cumulative
+    # code set as of Q4 2025. Annual base file would be preferred; replace when available.
+    # Landing page: cms.gov/medicare/coding-billing/healthcare-common-procedure-system
+    format: zip
+    extraction_method: bulk_file
+    refresh_cadence: quarterly
+    phi_status: non-phi
+    license: public_domain
+    robots_txt_status: allowed
+    user_agent: MASA-AdvocacyIngestor/0.1-pilot
+
+  - source_id: a04_cpt_handling
+    publisher: AMA
+    canonical_url: ""
+    # CPT is licensed; detection-only mode. No download. This entry is a placeholder.
+    format: none
+    extraction_method: pattern_detect
+    refresh_cadence: never
+    phi_status: non-phi
+    license: proprietary_unlicensed
+    robots_txt_status: n_a
+    user_agent: n_a
+
+  - source_id: a05_carc
+    publisher: WPC
+    canonical_url: "https://x12.org/codes/claim-adjustment-reason-codes"
+    # X12.org page for CARC codes. VERIFY: run.py uses HTMLParser on the raw HTML table;
+    # if X12 renders this page via JavaScript, the scraper will return 0 records and need
+    # updating to use a downloadable CSV/Excel link from the page instead.
+    format: html
+    extraction_method: web_scrape
+    refresh_cadence: quarterly
+    phi_status: non-phi
+    license: public
+    robots_txt_status: allowed
+    user_agent: MASA-AdvocacyIngestor/0.1-pilot
+
+  - source_id: a06_rarc
+    publisher: WPC
+    canonical_url: "https://x12.org/codes/remittance-advice-remark-codes"
+    # X12.org page for RARC codes. Same JS-rendering caveat as a05_carc applies.
+    format: html
+    extraction_method: web_scrape
+    refresh_cadence: quarterly
+    phi_status: non-phi
+    license: public
+    robots_txt_status: allowed
+    user_agent: MASA-AdvocacyIngestor/0.1-pilot
+
+  - source_id: a07_revenue
+    publisher: CMS
+    canonical_url: ""
+    # Manual CSV placed at data/raw/a07_revenue/revenue_codes.csv (high-volume codes subset).
+    # Full NUBC list is behind a membership paywall. No public CMS bulk download exists.
+    # CSV schema: code_or_range, normalized_category, patient_facing_explanation,
+    #             common_claim_context, mvp_use_case, priority, source_basis, source_url, licensing_note
+    format: csv
+    extraction_method: manual_import
+    refresh_cadence: quarterly
+    phi_status: non-phi
+    license: public
+    robots_txt_status: allowed
+    user_agent: MASA-AdvocacyIngestor/0.1-pilot
+
+  - source_id: a08_pos
+    publisher: CMS
+    canonical_url: "https://www.cms.gov/medicare/medicare-fee-for-service-payment/physicianfeesched/downloads/website-pos-database.pdf"
+    # CMS no longer publishes POS codes as Excel (last confirmed May 2, 2024).
+    # Ingestor parses the PDF directly using pdfplumber.
+    # Source page: cms.gov/medicare/coding-billing/place-of-service-codes/code-sets
+    format: pdf
+    extraction_method: bulk_file
+    refresh_cadence: quarterly
+    phi_status: non-phi
+    license: public_domain
+    robots_txt_status: allowed
+    user_agent: MASA-AdvocacyIngestor/0.1-pilot
+
+  - source_id: a09_modifiers
+    publisher: CMS
+    canonical_url: "https://www.cms.gov/files/zip/october-2025-alpha-numeric-hcpcs-file.zip"
+    # Modifiers are in the same sheet as procedure codes (RECID=7 rows, RECID=3 is procedures).
+    # As of April 2020 CMS publishes HCPCS as quarterly-only; no separate annual file exists.
+    # Keep this URL in sync with a03_hcpcs.
+    format: zip
+    extraction_method: bulk_file
+    refresh_cadence: quarterly
+    phi_status: non-phi
+    license: public_domain
+    robots_txt_status: allowed
+    user_agent: MASA-AdvocacyIngestor/0.1-pilot
+
+  - source_id: a10_ms_drg
+    publisher: CMS
+    canonical_url: "https://www.cms.gov/files/zip/msdrgv420icd10r0definitionsmanualtext.zip"
+    # ICD-10 MS-DRG Definitions Manual Files V42 (Text Version), updated 09/09/2024.
+    # Contains complete ICD-10 MS-DRG Grouper logic documentation (DRG table, MDC, weights).
+    # Landing page: cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/ms-drg-classifications-and-software
+    format: zip
+    extraction_method: bulk_file
+    refresh_cadence: annual
+    phi_status: non-phi
+    license: public_domain
+    robots_txt_status: allowed
+    user_agent: MASA-AdvocacyIngestor/0.1-pilot
+
+  - source_id: a11_ndc
+    publisher: FDA
+    canonical_url: "https://www.accessdata.fda.gov/cder/ndctext.zip"
+    # FDA NDC full release ZIP. Contains product.txt and package.txt (tab-delimited).
+    # Landing page: fda.gov/drugs/drug-approvals-and-databases/national-drug-code-directory
+    format: zip
+    extraction_method: bulk_file
+    refresh_cadence: weekly
+    phi_status: non-phi
+    license: public_domain
+    robots_txt_status: allowed
+    user_agent: MASA-AdvocacyIngestor/0.1-pilot
+
+  # ── Family B: Marketplace QHP ───────────────────────────────────────────────
+
+  - source_id: b01_qhp_landscape
+    publisher: CMS/CCIIO
+    canonical_url: "https://data.healthcare.gov/datafile/py2025/individual_market_medical.zip"
+    # Dataset page: https://data.healthcare.gov/dataset/735facd9-1df8-400e-b650-da881c728a2b
+    # "QHP Landscape PY2025 Individual Medical" — one row per plan-county for FFE/SBE-FP states.
+    format: xlsx
+    extraction_method: bulk_file
+    refresh_cadence: annual
+    phi_status: non-phi
+    license: public_domain
+    robots_txt_status: allowed
+    user_agent: MASA-AdvocacyIngestor/0.1-pilot
+
+  - source_id: b02_plan_attributes_puf
+    publisher: CMS/CCIIO
+    canonical_url: "https://download.cms.gov/marketplace-puf/2025/plan-attributes-puf.zip"
+    # VERIFY: same landing page as b01
+    format: zip
+    extraction_method: bulk_file
+    refresh_cadence: annual
+    phi_status: non-phi
+    license: public_domain
+    robots_txt_status: allowed
+    user_agent: MASA-AdvocacyIngestor/0.1-pilot
+
+  - source_id: b03_bencs_puf
+    publisher: CMS/CCIIO
+    canonical_url: "https://download.cms.gov/marketplace-puf/2025/benefits-and-cost-sharing-puf.zip"
+    # VERIFY: same landing page as b01. This is a large file (~200-500 MB ZIP).
+    format: zip
+    extraction_method: bulk_file
+    refresh_cadence: annual
+    phi_status: non-phi
+    license: public_domain
+    robots_txt_status: allowed
+    user_agent: MASA-AdvocacyIngestor/0.1-pilot
+
+  - source_id: b04_sadp_puf
+    publisher: CMS/CCIIO
+    canonical_url: "https://data.healthcare.gov/datafile/py2025/individual_market_dental.zip"
+    # PY2025 Stand-Alone Dental Plan individual market file from data.healthcare.gov.
+    # Note: may contain Excel instead of CSV — ingestor will error if so (same pattern as b01).
+    format: zip
+    extraction_method: bulk_file
+    refresh_cadence: annual
+    phi_status: non-phi
+    license: public_domain
+    robots_txt_status: allowed
+    user_agent: MASA-AdvocacyIngestor/0.1-pilot
+
+  - source_id: b05_marketplace_api
+    publisher: CMS
+    canonical_url: "https://marketplace.api.healthcare.gov/api/v1/"
+    # REQUIRES API KEY: register free at https://developer.cms.gov/marketplace-api/
+    # Set env var MARKETPLACE_API_KEY before running this ingestor.
+    format: api
+    extraction_method: rest_api
+    refresh_cadence: live
+    phi_status: non-phi
+    license: public
+    robots_txt_status: allowed
+    user_agent: MASA-AdvocacyIngestor/0.1-pilot

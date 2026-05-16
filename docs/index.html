@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MASA Medical Billing Data Platform</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --blue: #0052cc; --blue-dark: #003d99; --blue-light: #e6f0ff;
+    --green: #006644; --green-light: #e3fcef;
+    --amber: #ff8b00; --amber-light: #fff7e6;
+    --purple: #5243aa; --purple-light: #eae6ff;
+    --bg: #f4f5f7; --card: #ffffff; --border: #dfe1e6;
+    --text: #172b4d; --muted: #5e6c84; --subtle: #97a0af;
+    --radius: 8px; --shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+    --shadow-md: 0 4px 6px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.06);
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.5; }
+
+  /* ── Header ── */
+  header { background: var(--blue); color: #fff; padding: 0 32px; }
+  .header-inner { max-width: 1200px; margin: 0 auto; display: flex;
+                  align-items: center; justify-content: space-between; padding: 18px 0; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand-icon { width: 40px; height: 40px; background: rgba(255,255,255,.15);
+                border-radius: 8px; display: flex; align-items: center; justify-content: center;
+                font-size: 20px; }
+  .brand-text h1 { font-size: 18px; font-weight: 700; letter-spacing: -.3px; }
+  .brand-text p  { font-size: 12px; opacity: .75; margin-top: 1px; }
+  .badge { background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25);
+           color: #fff; font-size: 11px; font-weight: 600; padding: 3px 10px;
+           border-radius: 20px; letter-spacing: .3px; }
+
+  /* ── Nav tabs ── */
+  nav { background: var(--blue-dark); }
+  .nav-inner { max-width: 1200px; margin: 0 auto; display: flex; gap: 2px; padding: 0 32px; }
+  .tab { padding: 12px 20px; color: rgba(255,255,255,.7); font-size: 13px; font-weight: 500;
+         cursor: pointer; border-bottom: 3px solid transparent; transition: all .15s;
+         user-select: none; letter-spacing: .1px; }
+  .tab:hover  { color: #fff; }
+  .tab.active { color: #fff; border-bottom-color: #fff; }
+
+  /* ── Main content ── */
+  main { max-width: 1200px; margin: 0 auto; padding: 32px; }
+  section { display: none; }
+  section.active { display: block; }
+
+  /* ── Cards ── */
+  .card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+          padding: 24px; }
+  .card-title { font-size: 13px; font-weight: 700; text-transform: uppercase;
+                letter-spacing: .6px; color: var(--muted); margin-bottom: 16px; }
+
+  /* ── Overview: hero ── */
+  .hero { background: linear-gradient(135deg, var(--blue) 0%, #0041a8 100%);
+          color: #fff; border-radius: var(--radius); padding: 48px 40px; margin-bottom: 32px; }
+  .hero h2 { font-size: 28px; font-weight: 700; letter-spacing: -.5px; margin-bottom: 12px; }
+  .hero p  { font-size: 16px; opacity: .85; max-width: 640px; line-height: 1.6; }
+  .hero-pills { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 24px; }
+  .pill { background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.2);
+          color: #fff; font-size: 12px; font-weight: 600; padding: 5px 14px;
+          border-radius: 20px; letter-spacing: .2px; }
+
+  /* ── Capability grid ── */
+  .capability-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+                     margin-bottom: 32px; }
+  @media (max-width: 900px) { .capability-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 600px) { .capability-grid { grid-template-columns: 1fr; } }
+
+  .cap-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+              padding: 24px; border-top: 3px solid var(--blue); transition: box-shadow .15s; }
+  .cap-card:hover { box-shadow: var(--shadow-md); }
+  .cap-card:nth-child(2) { border-top-color: var(--green); }
+  .cap-card:nth-child(3) { border-top-color: var(--amber); }
+  .cap-card:nth-child(4) { border-top-color: var(--purple); }
+  .cap-card:nth-child(5) { border-top-color: #de350b; }
+  .cap-card:nth-child(6) { border-top-color: #00b8d9; }
+  .cap-icon { font-size: 28px; margin-bottom: 12px; }
+  .cap-card h3 { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+  .cap-card p  { font-size: 13px; color: var(--muted); line-height: 1.55; }
+  .cap-examples { margin-top: 12px; }
+  .cap-examples li { font-size: 12px; color: var(--muted); margin-left: 16px;
+                     margin-top: 4px; list-style: disc; }
+
+  /* ── Stats bar ── */
+  .stats-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+               margin-bottom: 32px; }
+  @media (max-width: 700px) { .stats-bar { grid-template-columns: repeat(2, 1fr); } }
+  .stat-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+               padding: 20px 24px; }
+  .stat-num  { font-size: 28px; font-weight: 800; color: var(--blue); letter-spacing: -1px;
+               line-height: 1; margin-bottom: 4px; }
+  .stat-label { font-size: 12px; color: var(--muted); font-weight: 500; }
+
+  /* ── Dashboard ── */
+  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+  @media (max-width: 800px) { .chart-grid { grid-template-columns: 1fr; } }
+  .chart-wrap { position: relative; height: 280px; }
+
+  /* ── Source table ── */
+  .source-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .source-table th { text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 700;
+                     text-transform: uppercase; letter-spacing: .5px; color: var(--muted);
+                     border-bottom: 2px solid var(--border); background: #fafbfc; }
+  .source-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  .source-table tr:last-child td { border-bottom: none; }
+  .source-table tr:hover td { background: #fafbfc; }
+  .status-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px;
+                  font-weight: 600; padding: 2px 8px; border-radius: 12px; }
+  .status-ok { background: var(--green-light); color: var(--green); }
+  .status-pending { background: var(--amber-light); color: var(--amber); }
+  .row-count { font-weight: 700; color: var(--text); }
+
+  /* ── Lookup ── */
+  .lookup-controls { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+  .lookup-controls select, .lookup-controls input {
+    padding: 10px 14px; border: 2px solid var(--border); border-radius: var(--radius);
+    font-size: 14px; color: var(--text); background: var(--card); outline: none;
+    transition: border-color .15s; }
+  .lookup-controls select:focus, .lookup-controls input:focus { border-color: var(--blue); }
+  .lookup-controls select { min-width: 220px; cursor: pointer; }
+  .lookup-controls input  { flex: 1; min-width: 240px; }
+
+  .results-info { font-size: 13px; color: var(--muted); margin-bottom: 12px; min-height: 20px; }
+  .results-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .results-table th { text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 700;
+                      text-transform: uppercase; letter-spacing: .5px; color: var(--muted);
+                      border-bottom: 2px solid var(--border); background: #fafbfc;
+                      position: sticky; top: 0; }
+  .results-table td { padding: 10px 14px; border-bottom: 1px solid var(--border);
+                      vertical-align: top; }
+  .results-table tr:last-child td { border-bottom: none; }
+  .results-table tr:hover td { background: #fafbfc; }
+  .code-cell { font-family: 'SFMono-Regular', Consolas, monospace; font-weight: 700;
+               color: var(--blue); white-space: nowrap; }
+  .type-tag { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 6px;
+              border-radius: 4px; background: var(--blue-light); color: var(--blue);
+              letter-spacing: .3px; white-space: nowrap; }
+
+  .table-scroll { max-height: 520px; overflow-y: auto; border: 1px solid var(--border);
+                  border-radius: var(--radius); }
+  .empty-state { text-align: center; padding: 48px 24px; color: var(--muted); }
+  .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-state p { font-size: 14px; }
+  .loading { text-align: center; padding: 32px; color: var(--muted); font-size: 14px; }
+
+  footer { max-width: 1200px; margin: 0 auto; padding: 24px 32px;
+           font-size: 12px; color: var(--subtle); border-top: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="brand">
+      <div class="brand-icon">🏥</div>
+      <div class="brand-text">
+        <h1>MASA Medical Billing Data Platform</h1>
+        <p>Public data ingestion pipeline for patient billing advocacy</p>
+      </div>
+    </div>
+    <span class="badge">PILOT · PY2025</span>
+  </div>
+</header>
+
+<nav>
+  <div class="nav-inner">
+    <div class="tab active" onclick="switchTab('overview')">Overview</div>
+    <div class="tab" onclick="switchTab('dashboard')">Data Dashboard</div>
+    <div class="tab" onclick="switchTab('lookup')">Code Lookup</div>
+  </div>
+</nav>
+
+<main>
+
+  <!-- ── OVERVIEW ── -->
+  <section id="overview" class="active">
+    <div class="hero">
+      <h2>Turning public billing data into patient advocacy intelligence</h2>
+      <p>This pipeline ingests 15 public medical billing data sources — diagnosis codes, procedure codes, drug codes, claim denial codes, and marketplace plan documents — into a unified database that powers real-time advocacy for patients navigating the healthcare billing system.</p>
+      <div class="hero-pills">
+        <span class="pill">15 Data Sources</span>
+        <span class="pill">~2M+ Records</span>
+        <span class="pill">ICD · HCPCS · NDC · DRG · CARC · RARC</span>
+        <span class="pill">ACA Marketplace Plans</span>
+        <span class="pill">SBC PDF Extraction</span>
+      </div>
+    </div>
+
+    <div class="capability-grid">
+
+      <div class="cap-card">
+        <div class="cap-icon">🔍</div>
+        <h3>Plain-English Code Lookup</h3>
+        <p>Translate any code from an Explanation of Benefits (EOB) into a clear, human-readable description — instantly.</p>
+        <ul class="cap-examples">
+          <li>ICD-10 diagnosis &amp; procedure codes</li>
+          <li>HCPCS / CPT procedure codes</li>
+          <li>Place of Service codes</li>
+          <li>MS-DRG hospital groupings</li>
+        </ul>
+      </div>
+
+      <div class="cap-card">
+        <div class="cap-icon">❌</div>
+        <h3>Claim Denial Intelligence</h3>
+        <p>Identify exactly why a claim was denied or adjusted by decoding CARC and RARC codes — the standardized reason codes payers attach to every remittance.</p>
+        <ul class="cap-examples">
+          <li>308 Claim Adjustment Reason Codes</li>
+          <li>1,198 Remittance Advice Remark Codes</li>
+          <li>Actionable denial context for appeals</li>
+        </ul>
+      </div>
+
+      <div class="cap-card">
+        <div class="cap-icon">💊</div>
+        <h3>Drug &amp; NDC Lookup</h3>
+        <p>Cross-reference National Drug Codes on pharmacy and infusion claims to verify drug identity, dosage form, and labeler — critical for prescription billing disputes.</p>
+        <ul class="cap-examples">
+          <li>113,516 FDA-registered drug products</li>
+          <li>Proprietary and generic name mapping</li>
+          <li>DEA schedule and route of administration</li>
+        </ul>
+      </div>
+
+      <div class="cap-card">
+        <div class="cap-icon">📋</div>
+        <h3>Plan Cost-Sharing Verification</h3>
+        <p>Look up a patient's actual plan cost-sharing structure — deductibles, copays, out-of-pocket maximums — extracted directly from the legally-binding Summary of Benefits and Coverage documents.</p>
+        <ul class="cap-examples">
+          <li>4,500+ individual market medical plans</li>
+          <li>699 stand-alone dental plans</li>
+          <li>In-network deductible, OOP max, copays</li>
+        </ul>
+      </div>
+
+      <div class="cap-card">
+        <div class="cap-icon">🏥</div>
+        <h3>DRG Validation</h3>
+        <p>Verify inpatient hospital DRG assignments and understand the grouper logic — a single wrong DRG can shift payment by thousands of dollars.</p>
+        <ul class="cap-examples">
+          <li>771 MS-DRG V42 definitions</li>
+          <li>MDC classification and surgical/medical type</li>
+          <li>ICD-10-PCS procedure code cross-reference</li>
+        </ul>
+      </div>
+
+      <div class="cap-card">
+        <div class="cap-icon">⚡</div>
+        <h3>Automated Data Refresh</h3>
+        <p>Every source is versioned, hash-checked, and logged. Re-running the pipeline only processes data that has actually changed — keeping the database current with minimal overhead.</p>
+        <ul class="cap-examples">
+          <li>Weekly: FDA NDC drug database</li>
+          <li>Quarterly: HCPCS, CARC, RARC, POS</li>
+          <li>Annual: ICD codes, marketplace plans</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- Stats bar populated by JS -->
+    <div class="stats-bar" id="overview-stats">
+      <div class="stat-card"><div class="stat-num" id="stat-codes">—</div><div class="stat-label">Medical Billing Codes</div></div>
+      <div class="stat-card"><div class="stat-num" id="stat-plans">—</div><div class="stat-label">Marketplace Plans (PY2025)</div></div>
+      <div class="stat-card"><div class="stat-num" id="stat-benefits">—</div><div class="stat-label">Plan Benefit Rows</div></div>
+      <div class="stat-card"><div class="stat-num" id="stat-sources">—</div><div class="stat-label">Active Data Sources</div></div>
+    </div>
+  </section>
+
+  <!-- ── DASHBOARD ── -->
+  <section id="dashboard">
+    <div class="stats-bar" style="margin-bottom:24px" id="dash-stats">
+      <div class="stat-card"><div class="stat-num" id="d-codes">—</div><div class="stat-label">Total Codes Loaded</div></div>
+      <div class="stat-card"><div class="stat-num" id="d-plans">—</div><div class="stat-label">Marketplace Plans</div></div>
+      <div class="stat-card"><div class="stat-num" id="d-benefits">—</div><div class="stat-label">Benefit Rows</div></div>
+      <div class="stat-card"><div class="stat-num" id="d-sbc">—</div><div class="stat-label">SBCs Parsed</div></div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="card">
+        <div class="card-title">Plans by Metal Level (Individual Medical)</div>
+        <div class="chart-wrap"><canvas id="metalChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Top 15 States by Plan Count</div>
+        <div class="chart-wrap"><canvas id="stateChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:24px">
+      <div class="card-title">Code Database Breakdown</div>
+      <div style="display:grid;grid-template-columns:260px 1fr;gap:24px;align-items:center">
+        <div style="position:relative;height:260px"><canvas id="codeChart"></canvas></div>
+        <div id="code-legend" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Data Source Inventory</div>
+      <div class="table-scroll">
+        <table class="source-table">
+          <thead><tr><th>Source</th><th>Description</th><th>Records</th><th>Last Updated</th><th>Status</th></tr></thead>
+          <tbody id="source-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── LOOKUP ── -->
+  <section id="lookup">
+    <div class="card" style="margin-bottom:24px">
+      <div class="card-title">Medical Code Lookup</div>
+      <div class="lookup-controls">
+        <select id="code-type" onchange="onTypeChange()">
+          <option value="all">All Code Types</option>
+          <option value="CARC">CARC — Claim Adjustment Reason Codes</option>
+          <option value="RARC">RARC — Remittance Advice Remark Codes</option>
+          <option value="HCPCS">HCPCS Level II</option>
+          <option value="MSDRG">MS-DRG — Inpatient Groupings</option>
+          <option value="POS">Place of Service</option>
+          <option value="Modifier">Billing Modifiers</option>
+          <option value="RevenueCode">UB-04 Revenue Codes</option>
+          <option value="ICD10CM">ICD-10-CM Diagnosis Codes</option>
+        </select>
+        <input id="search-input" type="text" placeholder="Search by code or description…"
+               oninput="onSearch()" autocomplete="off">
+      </div>
+      <div class="results-info" id="results-info">Enter a code or keyword to search.</div>
+      <div class="table-scroll">
+        <div id="lookup-state" class="empty-state">
+          <div class="icon">🔍</div>
+          <p>Start typing to search across billing codes</p>
+        </div>
+        <table class="results-table" id="results-table" style="display:none">
+          <thead><tr><th>Code</th><th>Type</th><th>Description</th></tr></thead>
+          <tbody id="results-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  Data sourced from CMS, FDA, X12, and data.healthcare.gov. All data is publicly available.
+  Pipeline: MASA Billing Advocacy Data Pilot · PY2025.
+</footer>
+
+<script>
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', ['overview','dashboard','lookup'][i] === name);
+  });
+  document.querySelectorAll('section').forEach(s => {
+    s.classList.toggle('active', s.id === name);
+  });
+  if (name === 'lookup' && !codesLoaded) initLookup();
+}
+
+// ── Formatting helpers ────────────────────────────────────────────────────────
+function fmt(n) {
+  if (n === null || n === undefined) return '—';
+  if (n >= 1_000_000) return (n/1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
+  if (n >= 1_000)     return n.toLocaleString();
+  return String(n);
+}
+
+// ── Load stats and render ─────────────────────────────────────────────────────
+async function loadStats() {
+  const r = await fetch('data/stats.json');
+  const s = await r.json();
+
+  // Overview stats
+  document.getElementById('stat-codes').textContent    = fmt(s.total_codes);
+  document.getElementById('stat-plans').textContent    = fmt(s.total_plans);
+  document.getElementById('stat-benefits').textContent = fmt(s.total_plan_benefits);
+  document.getElementById('stat-sources').textContent  = s.sources.filter(x => x.rows > 0 && !x.id.startsWith('f')).length;
+
+  // Dashboard stats
+  document.getElementById('d-codes').textContent    = fmt(s.total_codes);
+  document.getElementById('d-plans').textContent    = fmt(s.total_plans);
+  document.getElementById('d-benefits').textContent = fmt(s.total_plan_benefits);
+  document.getElementById('d-sbc').textContent      = fmt(s.sbc_parsed);
+
+  // Plans by metal chart
+  const metalColors = {
+    'Catastrophic': '#7a869a', 'Bronze': '#c57d39', 'Expanded Bronze': '#a0653a',
+    'Silver': '#97a0af', 'Gold': '#e3b341', 'Platinum': '#5243aa'
+  };
+  const metalLabels = Object.keys(s.plans_by_metal);
+  const metalData   = Object.values(s.plans_by_metal);
+  new Chart(document.getElementById('metalChart'), {
+    type: 'bar',
+    data: {
+      labels: metalLabels,
+      datasets: [{ data: metalData, backgroundColor: metalLabels.map(l => metalColors[l] || '#0052cc'),
+                   borderRadius: 4, borderSkipped: false }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+               scales: { x: { grid: { display: false } }, y: { grid: { color: '#f0f0f0' } } } }
+  });
+
+  // Plans by state chart
+  const stateLabels = s.plans_by_state.map(x => x.state);
+  const stateData   = s.plans_by_state.map(x => x.count);
+  new Chart(document.getElementById('stateChart'), {
+    type: 'bar',
+    data: {
+      labels: stateLabels,
+      datasets: [{ data: stateData, backgroundColor: '#0052cc', borderRadius: 4, borderSkipped: false }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+               scales: { x: { grid: { display: false } }, y: { grid: { color: '#f0f0f0' } } } }
+  });
+
+  // Code type donut
+  const codeColors = ['#0052cc','#00875a','#ff8b00','#5243aa','#de350b','#00b8d9','#6554c0','#ff5630','#36b37e'];
+  const codeLabels = Object.keys(s.code_counts);
+  const codeData   = Object.values(s.code_counts);
+  new Chart(document.getElementById('codeChart'), {
+    type: 'doughnut',
+    data: {
+      labels: codeLabels,
+      datasets: [{ data: codeData, backgroundColor: codeColors, borderWidth: 2, borderColor: '#fff' }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+               cutout: '65%' }
+  });
+
+  // Custom legend
+  const legend = document.getElementById('code-legend');
+  codeLabels.forEach((l, i) => {
+    const div = document.createElement('div');
+    div.style = 'display:flex;align-items:center;gap:8px';
+    div.innerHTML = `<span style="width:10px;height:10px;border-radius:2px;background:${codeColors[i]};flex-shrink:0"></span>
+                     <span style="color:#5e6c84">${l}</span>
+                     <span style="margin-left:auto;font-weight:700">${codeData[i].toLocaleString()}</span>`;
+    legend.appendChild(div);
+  });
+
+  // Source table
+  const tbody = document.getElementById('source-tbody');
+  s.sources.forEach(src => {
+    const tr = document.createElement('tr');
+    const hasSbc = src.id.startsWith('f');
+    const statusHtml = src.rows > 0
+      ? `<span class="status-badge status-ok">✓ Loaded</span>`
+      : `<span class="status-badge status-pending">Pending</span>`;
+    tr.innerHTML = `
+      <td><code style="font-size:12px;color:#5e6c84">${src.id}</code></td>
+      <td>${src.label}</td>
+      <td class="row-count">${fmt(src.rows)}</td>
+      <td style="color:#5e6c84">${src.retrieved_at}</td>
+      <td>${statusHtml}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// ── Code Lookup ───────────────────────────────────────────────────────────────
+let codesLoaded = false;
+let allCodes = [];     // small sets
+let icdCodes = [];     // loaded lazily
+let icdLoaded = false;
+let searchTimer;
+
+async function initLookup() {
+  codesLoaded = true;
+  document.getElementById('lookup-state').innerHTML =
+    '<div class="loading">Loading code data…</div>';
+  const r = await fetch('data/codes.json');
+  allCodes = await r.json();
+  document.getElementById('lookup-state').innerHTML =
+    '<div class="empty-state"><div class="icon">🔍</div><p>Start typing to search across billing codes</p></div>';
+  document.getElementById('results-info').textContent =
+    `${allCodes.length.toLocaleString()} codes loaded. Select "ICD-10-CM" to load diagnosis codes.`;
+}
+
+async function loadICD() {
+  if (icdLoaded) return;
+  document.getElementById('results-info').textContent = 'Loading ICD-10-CM codes (this may take a moment)…';
+  const r = await fetch('data/icd10cm.json');
+  const raw = await r.json();
+  icdCodes = raw.map(x => ({ type: 'ICD10CM', code: x.code, desc: x.desc }));
+  icdLoaded = true;
+}
+
+function onTypeChange() {
+  document.getElementById('search-input').value = '';
+  document.getElementById('results-info').textContent = '';
+  renderResults([]);
+  const type = document.getElementById('code-type').value;
+  if (type === 'ICD10CM' && !icdLoaded) {
+    loadICD().then(() => {
+      document.getElementById('results-info').textContent =
+        `${icdCodes.length.toLocaleString()} ICD-10-CM codes loaded. Type to search.`;
+    });
+  }
+}
+
+function onSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(doSearch, 180);
+}
+
+function doSearch() {
+  const type  = document.getElementById('code-type').value;
+  const query = document.getElementById('search-input').value.trim().toLowerCase();
+  if (!query) { renderResults([]); return; }
+
+  let pool = type === 'ICD10CM' ? icdCodes : allCodes;
+  if (type !== 'ICD10CM' && type !== 'all') pool = pool.filter(c => c.type === type);
+
+  const results = [];
+  const exact = [], codeStart = [], descStart = [], descContains = [];
+  for (const c of pool) {
+    const cLower = c.code.toLowerCase(), dLower = c.desc.toLowerCase();
+    if (cLower === query || dLower === query)       { exact.push(c); continue; }
+    if (cLower.startsWith(query))                   { codeStart.push(c); continue; }
+    if (dLower.startsWith(query))                   { descStart.push(c); continue; }
+    if (cLower.includes(query) || dLower.includes(query)) { descContains.push(c); }
+  }
+  const combined = [...exact, ...codeStart, ...descStart, ...descContains].slice(0, 200);
+  renderResults(combined, pool.length);
+}
+
+function renderResults(results, poolSize) {
+  const state = document.getElementById('lookup-state');
+  const table = document.getElementById('results-table');
+  const tbody = document.getElementById('results-tbody');
+  const info  = document.getElementById('results-info');
+
+  if (!results.length) {
+    state.style.display = '';
+    table.style.display = 'none';
+    if (document.getElementById('search-input').value.trim()) {
+      info.textContent = 'No results found.';
+      state.innerHTML = '<div class="empty-state"><div class="icon">🤷</div><p>No matching codes found. Try a different search term.</p></div>';
+    }
+    return;
+  }
+
+  state.style.display = 'none';
+  table.style.display = '';
+  info.textContent = `Showing ${results.length.toLocaleString()}${results.length === 200 ? '+' : ''} result${results.length !== 1 ? 's' : ''}`;
+
+  const typeColors = {
+    CARC: '#0052cc', RARC: '#00875a', HCPCS: '#5243aa', MSDRG: '#de350b',
+    POS: '#ff8b00', Modifier: '#00b8d9', RevenueCode: '#6554c0', ICD10CM: '#403294'
+  };
+
+  tbody.innerHTML = results.map(c => `
+    <tr>
+      <td class="code-cell">${c.code}</td>
+      <td><span class="type-tag" style="background:${typeColors[c.type]||'#0052cc'}20;color:${typeColors[c.type]||'#0052cc'}">${c.type}</span></td>
+      <td>${c.desc}</td>
+    </tr>`).join('');
+}
+
+loadStats();
+</script>
+</body>
+</html>

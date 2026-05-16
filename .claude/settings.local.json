@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install *)",
+      "Bash(python -c ' *)",
+      "Bash(python3 -c ' *)",
+      "PowerShell(& \"C:\\\\Users\\\\mabka\\\\OneDrive\\\\Desktop\\\\options_engine\\\\venv\\\\Scripts\\\\python.exe\" --version)",
+      "PowerShell(& \"C:\\\\Users\\\\mabka\\\\OneDrive\\\\Desktop\\\\options_engine\\\\venv\\\\Scripts\\\\python.exe\" -c \"import sys; print\\(sys.base_prefix\\)\")",
+      "PowerShell(& \"C:\\\\Users\\\\mabka\\\\AppData\\\\Local\\\\Python\\\\pythoncore-3.14-64\\\\python.exe\" -m venv \"C:\\\\Users\\\\mabka\\\\OneDrive\\\\Desktop\\\\medical_billing_data\\\\venv\")",
+      "PowerShell(& \"C:\\\\Users\\\\mabka\\\\OneDrive\\\\Desktop\\\\medical_billing_data\\\\venv\\\\Scripts\\\\pip.exe\" install -r \"C:\\\\Users\\\\mabka\\\\OneDrive\\\\Desktop\\\\medical_billing_data\\\\requirements.txt\")",
+      "PowerShell(& \"C:\\\\Users\\\\mabka\\\\OneDrive\\\\Desktop\\\\medical_billing_data\\\\venv\\\\Scripts\\\\pip.exe\" install truststore)",
+      "PowerShell(& \"C:\\\\Users\\\\mabka\\\\OneDrive\\\\Desktop\\\\medical_billing_data\\\\venv\\\\Scripts\\\\python.exe\" -c \"import zipfile; zf = zipfile.ZipFile\\(r'C:\\\\Users\\\\mabka\\\\OneDrive\\\\Desktop\\\\medical_billing_data\\\\data\\\\raw\\\\a02_icd10pcs\\\\2025-icd-10-pcs-code-tables-and-index.zip'\\); print\\('\\\\n'.join\\(zf.namelist\\(\\)\\)\\)\")",
+      "PowerShell(& \"C:\\\\Users\\\\mabka\\\\OneDrive\\\\Desktop\\\\medical_billing_data\\\\venv\\\\Scripts\\\\python.exe\" -c \"import zipfile; zf = zipfile.ZipFile\\(r'C:\\\\Users\\\\mabka\\\\OneDrive\\\\Desktop\\\\medical_billing_data\\\\data\\\\raw\\\\a02_icd10pcs\\\\2025-code-tables-tabular-and-index.zip'\\); print\\('\\\\n'.join\\(zf.namelist\\(\\)\\)\\)\")",
+      "PowerShell(& \"C:\\\\Users\\\\mabka\\\\OneDrive\\\\Desktop\\\\medical_billing_data\\\\venv\\\\Scripts\\\\python.exe\" -c \"import zipfile; zf = zipfile.ZipFile\\(r'C:\\\\Users\\\\mabka\\\\OneDrive\\\\Desktop\\\\medical_billing_data\\\\data\\\\raw\\\\a03_hcpcs\\\\october-2025-alpha-numeric-hcpcs-file.zip'\\); print\\('\\\\n'.join\\(zf.namelist\\(\\)\\)\\)\")",
+      "PowerShell(& \"C:\\\\Users\\\\mabka\\\\OneDrive\\\\Desktop\\\\medical_billing_data\\\\venv\\\\Scripts\\\\python.exe\" -c \"import zipfile; zf = zipfile.ZipFile\\(r'C:\\\\Users\\\\mabka\\\\OneDrive\\\\Desktop\\\\medical_billing_data\\\\data\\\\raw\\\\b01_qhp_landscape\\\\individual_market_medical.zip'\\); print\\('\\\\n'.join\\(zf.namelist\\(\\)\\)\\)\")",
+      "PowerShell(& \"C:\\\\Users\\\\mabka\\\\OneDrive\\\\Desktop\\\\medical_billing_data\\\\venv\\\\Scripts\\\\python.exe\" \"C:\\\\Users\\\\mabka\\\\OneDrive\\\\Desktop\\\\medical_billing_data\\\\export_for_web.py\")"
+    ]
+  }
+}
