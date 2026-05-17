@@ -4,24 +4,36 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MASA Medical Billing Data Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --blue: #0052cc; --blue-dark: #003d99; --blue-light: #e6f0ff;
-    --green: #006644; --green-light: #e3fcef;
-    --amber: #ff8b00; --amber-light: #fff7e6;
-    --purple: #5243aa; --purple-light: #eae6ff;
-    --bg: #f4f5f7; --card: #ffffff; --border: #dfe1e6;
-    --text: #172b4d; --muted: #5e6c84; --subtle: #97a0af;
-    --radius: 8px; --shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
-    --shadow-md: 0 4px 6px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.06);
+    /* MASA Brand Palette */
+    --horizon: #230871;      /* Primary dark — headings, headers, CTAs */
+    --tide: #0071CE;         /* Primary bright — accents, links, highlights */
+    --flare: #E64B38;        /* Accent warm — alerts, urgent (use sparingly) */
+    --shine: #FFD040;        /* Accent gold — awards (use sparingly) */
+    --harbor: #968694;       /* Neutral — muted text, dividers */
+    --harbor-tint: #E8E3E8;  /* Light bg — card fills, borders */
+    --masa-body: #262626;    /* All body copy */
+
+    /* Semantic aliases */
+    --bg: #F5F4F7; --card: #FFFFFF; --border: #E8E3E8;
+    --text: #262626; --muted: #968694; --subtle: #B8B0B7;
+    --green: #1a6b3c; --green-light: #e8f5ee;
+    --amber-light: #fdf2f0;
+    --radius: 8px;
+    --shadow: 0 2px 8px rgba(35,8,113,.10);
+    --shadow-md: 0 4px 14px rgba(35,8,113,.16);
   }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-         background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.5; }
+  body { font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+         background: var(--bg); color: var(--masa-body); font-size: 15px; line-height: 1.5; }
+  h1, h2, h3, .tab, .card-title, .cap-card h3, .stat-label, .brand-text h1 {
+    font-family: 'Poppins', sans-serif; }
 
   /* ── Header ── */
-  header { background: var(--blue); color: #fff; padding: 0 32px; }
+  header { background: var(--horizon); color: #fff; padding: 0 32px; }
   .header-inner { max-width: 1200px; margin: 0 auto; display: flex;
                   align-items: center; justify-content: space-between; padding: 18px 0; }
   .brand { display: flex; align-items: center; gap: 12px; }
@@ -35,13 +47,13 @@
            border-radius: 20px; letter-spacing: .3px; }
 
   /* ── Nav tabs ── */
-  nav { background: var(--blue-dark); }
+  nav { background: #1a0665; }
   .nav-inner { max-width: 1200px; margin: 0 auto; display: flex; gap: 2px; padding: 0 32px; }
-  .tab { padding: 12px 20px; color: rgba(255,255,255,.7); font-size: 13px; font-weight: 500;
+  .tab { padding: 12px 20px; color: rgba(255,255,255,.65); font-size: 13px; font-weight: 600;
          cursor: pointer; border-bottom: 3px solid transparent; transition: all .15s;
-         user-select: none; letter-spacing: .1px; }
+         user-select: none; letter-spacing: .2px; }
   .tab:hover  { color: #fff; }
-  .tab.active { color: #fff; border-bottom-color: #fff; }
+  .tab.active { color: #fff; border-bottom-color: var(--tide); }
 
   /* ── Main content ── */
   main { max-width: 1200px; margin: 0 auto; padding: 32px; }
@@ -55,12 +67,14 @@
                 letter-spacing: .6px; color: var(--muted); margin-bottom: 16px; }
 
   /* ── Overview: hero ── */
-  .hero { background: linear-gradient(135deg, var(--blue) 0%, #0041a8 100%);
-          color: #fff; border-radius: var(--radius); padding: 48px 40px; margin-bottom: 32px; }
-  .hero h2 { font-size: 28px; font-weight: 700; letter-spacing: -.5px; margin-bottom: 12px; }
+  .hero { background: linear-gradient(135deg, var(--horizon) 0%, #0c0453 100%);
+          color: #fff; border-radius: var(--radius); padding: 48px 40px; margin-bottom: 32px;
+          border-left: 5px solid var(--tide); }
+  .hero h2 { font-family: 'Poppins', sans-serif; font-size: 28px; font-weight: 700;
+             letter-spacing: -.5px; margin-bottom: 12px; }
   .hero p  { font-size: 16px; opacity: .85; max-width: 640px; line-height: 1.6; }
   .hero-pills { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 24px; }
-  .pill { background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.2);
+  .pill { background: rgba(0,113,206,.25); border: 1px solid rgba(0,113,206,.4);
           color: #fff; font-size: 12px; font-weight: 600; padding: 5px 14px;
           border-radius: 20px; letter-spacing: .2px; }
 
@@ -71,15 +85,15 @@
   @media (max-width: 600px) { .capability-grid { grid-template-columns: 1fr; } }
 
   .cap-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
-              padding: 24px; border-top: 3px solid var(--blue); transition: box-shadow .15s; }
+              padding: 24px; border-top: 3px solid var(--horizon); transition: box-shadow .15s; }
   .cap-card:hover { box-shadow: var(--shadow-md); }
-  .cap-card:nth-child(2) { border-top-color: var(--green); }
-  .cap-card:nth-child(3) { border-top-color: var(--amber); }
-  .cap-card:nth-child(4) { border-top-color: var(--purple); }
-  .cap-card:nth-child(5) { border-top-color: #de350b; }
-  .cap-card:nth-child(6) { border-top-color: #00b8d9; }
+  .cap-card:nth-child(2) { border-top-color: var(--tide); }
+  .cap-card:nth-child(3) { border-top-color: var(--flare); }
+  .cap-card:nth-child(4) { border-top-color: var(--horizon); }
+  .cap-card:nth-child(5) { border-top-color: var(--tide); }
+  .cap-card:nth-child(6) { border-top-color: var(--harbor); }
   .cap-icon { font-size: 28px; margin-bottom: 12px; }
-  .cap-card h3 { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+  .cap-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 8px; color: var(--horizon); }
   .cap-card p  { font-size: 13px; color: var(--muted); line-height: 1.55; }
   .cap-examples { margin-top: 12px; }
   .cap-examples li { font-size: 12px; color: var(--muted); margin-left: 16px;
@@ -91,8 +105,8 @@
   @media (max-width: 700px) { .stats-bar { grid-template-columns: repeat(2, 1fr); } }
   .stat-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
                padding: 20px 24px; }
-  .stat-num  { font-size: 28px; font-weight: 800; color: var(--blue); letter-spacing: -1px;
-               line-height: 1; margin-bottom: 4px; }
+  .stat-num  { font-family: 'Poppins', sans-serif; font-size: 28px; font-weight: 700;
+               color: var(--horizon); letter-spacing: -1px; line-height: 1; margin-bottom: 4px; }
   .stat-label { font-size: 12px; color: var(--muted); font-weight: 500; }
 
   /* ── Dashboard ── */
@@ -120,7 +134,7 @@
     padding: 10px 14px; border: 2px solid var(--border); border-radius: var(--radius);
     font-size: 14px; color: var(--text); background: var(--card); outline: none;
     transition: border-color .15s; }
-  .lookup-controls select:focus, .lookup-controls input:focus { border-color: var(--blue); }
+  .lookup-controls select:focus, .lookup-controls input:focus { border-color: var(--tide); }
   .lookup-controls select { min-width: 220px; cursor: pointer; }
   .lookup-controls input  { flex: 1; min-width: 240px; }
 
@@ -135,10 +149,10 @@
   .results-table tr:last-child td { border-bottom: none; }
   .results-table tr:hover td { background: #fafbfc; }
   .code-cell { font-family: 'SFMono-Regular', Consolas, monospace; font-weight: 700;
-               color: var(--blue); white-space: nowrap; }
+               color: var(--tide); white-space: nowrap; }
   .type-tag { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 6px;
-              border-radius: 4px; background: var(--blue-light); color: var(--blue);
-              letter-spacing: .3px; white-space: nowrap; }
+              border-radius: 4px; background: rgba(35,8,113,.08); color: var(--horizon);
+              letter-spacing: .3px; white-space: nowrap; font-family: 'Open Sans', sans-serif; }
 
   .table-scroll { max-height: 520px; overflow-y: auto; border: 1px solid var(--border);
                   border-radius: var(--radius); }
@@ -151,8 +165,8 @@
            font-size: 12px; color: var(--subtle); border-top: 1px solid var(--border); }
 
   /* ── Quality scorecard ── */
-  .quality-big { font-size: 48px; font-weight: 800; color: var(--green);
-                 letter-spacing: -2px; line-height: 1; }
+  .quality-big { font-family: 'Poppins', sans-serif; font-size: 48px; font-weight: 700;
+                 color: var(--tide); letter-spacing: -2px; line-height: 1; }
   .quality-label { font-size: 13px; color: var(--muted); margin-top: 4px; margin-bottom: 20px; }
   .quality-bar { height: 12px; border-radius: 6px; background: #dfe1e6;
                  overflow: hidden; display: flex; margin-bottom: 12px; }
@@ -320,11 +334,13 @@
     </div>
 
     <!-- ── SBC Insights ── -->
-    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;
-                color:#97a0af;margin:32px 0 16px;padding-top:8px;border-top:2px solid #dfe1e6">
+    <div style="font-family:'Poppins',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;
+                letter-spacing:.8px;color:#968694;margin:32px 0 16px;padding-top:8px;
+                border-top:2px solid #E8E3E8">
       SBC Cost-Sharing Insights
-      <span style="font-weight:400;font-size:11px;text-transform:none;letter-spacing:0;
-                   color:#5e6c84;margin-left:8px">Extracted from Summary of Benefits &amp; Coverage PDFs</span>
+      <span style="font-family:'Open Sans',sans-serif;font-weight:400;font-size:11px;
+                   text-transform:none;letter-spacing:0;color:#968694;margin-left:8px">
+        Extracted from Summary of Benefits &amp; Coverage PDFs</span>
     </div>
 
     <div class="chart-grid" style="margin-bottom:24px">
@@ -340,7 +356,7 @@
 
     <div class="card">
       <div class="card-title">Median Copay by Service Type</div>
-      <div style="font-size:12px;color:#5e6c84;margin-bottom:16px">
+      <div style="font-size:12px;color:#968694;margin-bottom:16px">
         Based on plans with flat-dollar copays. Percentage shown is share of plans using coinsurance instead.
       </div>
       <div class="chart-wrap" style="height:260px"><canvas id="copayChart"></canvas></div>
@@ -425,10 +441,10 @@ async function loadStats() {
   document.getElementById('d-benefits').textContent = fmt(s.total_plan_benefits);
   document.getElementById('d-sbc').textContent      = fmt(s.sbc_parsed);
 
-  // Plans by metal chart
+  // Plans by metal chart — MASA palette
   const metalColors = {
-    'Catastrophic': '#7a869a', 'Bronze': '#c57d39', 'Expanded Bronze': '#a0653a',
-    'Silver': '#97a0af', 'Gold': '#e3b341', 'Platinum': '#5243aa'
+    'Catastrophic': '#968694', 'Bronze': '#C57D39',
+    'Silver': '#B0BEC5',       'Gold': '#FFD040', 'Platinum': '#230871'
   };
   const metalLabels = Object.keys(s.plans_by_metal);
   const metalData   = Object.values(s.plans_by_metal);
@@ -436,28 +452,28 @@ async function loadStats() {
     type: 'bar',
     data: {
       labels: metalLabels,
-      datasets: [{ data: metalData, backgroundColor: metalLabels.map(l => metalColors[l] || '#0052cc'),
+      datasets: [{ data: metalData, backgroundColor: metalLabels.map(l => metalColors[l] || '#0071CE'),
                    borderRadius: 4, borderSkipped: false }]
     },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
-               scales: { x: { grid: { display: false } }, y: { grid: { color: '#f0f0f0' } } } }
+               scales: { x: { grid: { display: false } }, y: { grid: { color: '#E8E3E8' } } } }
   });
 
-  // Plans by state chart
+  // Plans by state chart — Tide
   const stateLabels = s.plans_by_state.map(x => x.state);
   const stateData   = s.plans_by_state.map(x => x.count);
   new Chart(document.getElementById('stateChart'), {
     type: 'bar',
     data: {
       labels: stateLabels,
-      datasets: [{ data: stateData, backgroundColor: '#0052cc', borderRadius: 4, borderSkipped: false }]
+      datasets: [{ data: stateData, backgroundColor: '#0071CE', borderRadius: 4, borderSkipped: false }]
     },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
-               scales: { x: { grid: { display: false } }, y: { grid: { color: '#f0f0f0' } } } }
+               scales: { x: { grid: { display: false } }, y: { grid: { color: '#E8E3E8' } } } }
   });
 
-  // Code type donut
-  const codeColors = ['#0052cc','#00875a','#ff8b00','#5243aa','#de350b','#00b8d9','#6554c0','#ff5630','#36b37e'];
+  // Code type donut — MASA palette
+  const codeColors = ['#230871','#0071CE','#E64B38','#FFD040','#968694','#3A1B8C','#0091EE','#FF7A6A','#B8B0B7'];
   const codeLabels = Object.keys(s.code_counts);
   const codeData   = Object.values(s.code_counts);
   new Chart(document.getElementById('codeChart'), {
@@ -589,9 +605,10 @@ function renderResults(results, poolSize) {
   table.style.display = '';
   info.textContent = `Showing ${results.length.toLocaleString()}${results.length === 200 ? '+' : ''} result${results.length !== 1 ? 's' : ''}`;
 
+  // MASA palette type tag colors
   const typeColors = {
-    CARC: '#0052cc', RARC: '#00875a', HCPCS: '#5243aa', MSDRG: '#de350b',
-    POS: '#ff8b00', Modifier: '#00b8d9', RevenueCode: '#6554c0', ICD10CM: '#403294'
+    CARC: '#230871', RARC: '#0071CE', HCPCS: '#3A1B8C', MSDRG: '#E64B38',
+    POS: '#968694', Modifier: '#005BAD', RevenueCode: '#1A0665', ICD10CM: '#0071CE'
   };
 
   tbody.innerHTML = results.map(c => `
@@ -605,10 +622,10 @@ function renderResults(results, poolSize) {
 loadStats();
 
 async function loadSBCCharts(s) {
-  // ── 1. Average deductible by metal level ────────────────────────────────
+  // ── 1. Average deductible by metal level — MASA palette ─────────────────
   const metalColors = {
-    Platinum: '#5243aa', Gold: '#e3a008', Silver: '#97a0af',
-    Bronze: '#c57d39', Catastrophic: '#7a869a'
+    Platinum: '#230871', Gold: '#FFD040', Silver: '#B0BEC5',
+    Bronze: '#C57D39', Catastrophic: '#968694'
   };
   const deductData = s.sbc_deduct_by_metal || {};
   const deductOrder = ['Catastrophic', 'Bronze', 'Silver', 'Gold', 'Platinum'];
@@ -662,26 +679,26 @@ async function loadSBCCharts(s) {
     <div class="quality-label">of fields extracted at high confidence across
       <strong>${(q.plans_parsed || 0).toLocaleString()}</strong> plans parsed</div>
     <div class="quality-bar">
-      <div class="quality-bar-fill" style="width:${highPct}%;background:#00875a"></div>
-      <div class="quality-bar-fill" style="width:${medPct}%;background:#ff8b00"></div>
-      <div class="quality-bar-fill" style="width:${lowPct}%;background:#de350b"></div>
-      <div class="quality-bar-fill" style="width:${missPct}%;background:#dfe1e6"></div>
+      <div class="quality-bar-fill" style="width:${highPct}%;background:#0071CE"></div>
+      <div class="quality-bar-fill" style="width:${medPct}%;background:#FFD040"></div>
+      <div class="quality-bar-fill" style="width:${lowPct}%;background:#E64B38"></div>
+      <div class="quality-bar-fill" style="width:${missPct}%;background:#E8E3E8"></div>
     </div>
     <div class="quality-legend">
       <div class="quality-legend-item">
-        <div class="quality-dot" style="background:#00875a"></div>
+        <div class="quality-dot" style="background:#0071CE"></div>
         <span>High confidence — ${(q.high||0).toLocaleString()} fields</span>
       </div>
       <div class="quality-legend-item">
-        <div class="quality-dot" style="background:#ff8b00"></div>
+        <div class="quality-dot" style="background:#FFD040"></div>
         <span>Medium confidence — ${(q.medium||0).toLocaleString()} fields</span>
       </div>
       <div class="quality-legend-item">
-        <div class="quality-dot" style="background:#de350b"></div>
+        <div class="quality-dot" style="background:#E64B38"></div>
         <span>Low confidence — ${(q.low||0).toLocaleString()} fields</span>
       </div>
       <div class="quality-legend-item">
-        <div class="quality-dot" style="background:#dfe1e6"></div>
+        <div class="quality-dot" style="background:#E8E3E8;border:1px solid #968694"></div>
         <span>Not found — ${(q.not_found||0).toLocaleString()} fields</span>
       </div>
     </div>`;
@@ -692,7 +709,7 @@ async function loadSBCCharts(s) {
   const copayLabels  = serviceOrder.filter(k => copays[k]);
   const medianVals   = copayLabels.map(k => copays[k].median_copay);
   const coinPcts     = copayLabels.map(k => copays[k].pct_coinsurance);
-  const serviceColors = ['#0052cc','#5243aa','#de350b','#ff8b00','#00875a'];
+  const serviceColors = ['#0071CE','#230871','#E64B38','#968694','#FFD040'];
 
   new Chart(document.getElementById('copayChart'), {
     type: 'bar',
