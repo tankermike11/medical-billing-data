@@ -149,6 +149,17 @@
 
   footer { max-width: 1200px; margin: 0 auto; padding: 24px 32px;
            font-size: 12px; color: var(--subtle); border-top: 1px solid var(--border); }
+
+  /* ── Quality scorecard ── */
+  .quality-big { font-size: 48px; font-weight: 800; color: var(--green);
+                 letter-spacing: -2px; line-height: 1; }
+  .quality-label { font-size: 13px; color: var(--muted); margin-top: 4px; margin-bottom: 20px; }
+  .quality-bar { height: 12px; border-radius: 6px; background: #dfe1e6;
+                 overflow: hidden; display: flex; margin-bottom: 12px; }
+  .quality-bar-fill { height: 100%; transition: width .3s; }
+  .quality-legend { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; }
+  .quality-legend-item { display: flex; align-items: center; gap: 6px; }
+  .quality-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 </style>
 </head>
 <body>
@@ -298,7 +309,7 @@
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" style="margin-bottom:24px">
       <div class="card-title">Data Source Inventory</div>
       <div class="table-scroll">
         <table class="source-table">
@@ -307,6 +318,34 @@
         </table>
       </div>
     </div>
+
+    <!-- ── SBC Insights ── -->
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;
+                color:#97a0af;margin:32px 0 16px;padding-top:8px;border-top:2px solid #dfe1e6">
+      SBC Cost-Sharing Insights
+      <span style="font-weight:400;font-size:11px;text-transform:none;letter-spacing:0;
+                   color:#5e6c84;margin-left:8px">Extracted from Summary of Benefits &amp; Coverage PDFs</span>
+    </div>
+
+    <div class="chart-grid" style="margin-bottom:24px">
+      <div class="card">
+        <div class="card-title">Avg Individual Deductible by Metal Level</div>
+        <div class="chart-wrap"><canvas id="deductChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Extraction Quality Scorecard</div>
+        <div id="quality-scorecard"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Median Copay by Service Type</div>
+      <div style="font-size:12px;color:#5e6c84;margin-bottom:16px">
+        Based on plans with flat-dollar copays. Percentage shown is share of plans using coinsurance instead.
+      </div>
+      <div class="chart-wrap" style="height:260px"><canvas id="copayChart"></canvas></div>
+    </div>
+
   </section>
 
   <!-- ── LOOKUP ── -->
@@ -442,6 +481,9 @@ async function loadStats() {
     legend.appendChild(div);
   });
 
+  // SBC charts (after main stats are rendered)
+  loadSBCCharts(s);
+
   // Source table
   const tbody = document.getElementById('source-tbody');
   s.sources.forEach(src => {
@@ -561,6 +603,137 @@ function renderResults(results, poolSize) {
 }
 
 loadStats();
+
+async function loadSBCCharts(s) {
+  // ── 1. Average deductible by metal level ────────────────────────────────
+  const metalColors = {
+    Platinum: '#5243aa', Gold: '#e3a008', Silver: '#97a0af',
+    Bronze: '#c57d39', Catastrophic: '#7a869a'
+  };
+  const deductData = s.sbc_deduct_by_metal || {};
+  const deductOrder = ['Catastrophic', 'Bronze', 'Silver', 'Gold', 'Platinum'];
+  const deductLabels = deductOrder.filter(m => deductData[m] !== undefined);
+  const deductVals   = deductLabels.map(m => deductData[m]);
+  const deductColors = deductLabels.map(m => metalColors[m] || '#0052cc');
+
+  new Chart(document.getElementById('deductChart'), {
+    type: 'bar',
+    data: {
+      labels: deductLabels,
+      datasets: [{
+        data: deductVals,
+        backgroundColor: deductColors,
+        borderRadius: 5,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` $${ctx.parsed.x.toLocaleString()} avg individual deductible`
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: '#f0f0f0' },
+          ticks: { callback: v => '$' + v.toLocaleString() }
+        },
+        y: { grid: { display: false } }
+      }
+    }
+  });
+
+  // ── 2. Extraction quality scorecard ─────────────────────────────────────
+  const q = s.sbc_quality || {};
+  const total = q.total || 1;
+  const highPct   = Math.round((q.high   || 0) / total * 100);
+  const medPct    = Math.round((q.medium || 0) / total * 100);
+  const lowPct    = Math.round((q.low    || 0) / total * 100);
+  const missPct   = Math.round((q.not_found || 0) / total * 100);
+
+  document.getElementById('quality-scorecard').innerHTML = `
+    <div class="quality-big">${highPct}%</div>
+    <div class="quality-label">of fields extracted at high confidence across
+      <strong>${(q.plans_parsed || 0).toLocaleString()}</strong> plans parsed</div>
+    <div class="quality-bar">
+      <div class="quality-bar-fill" style="width:${highPct}%;background:#00875a"></div>
+      <div class="quality-bar-fill" style="width:${medPct}%;background:#ff8b00"></div>
+      <div class="quality-bar-fill" style="width:${lowPct}%;background:#de350b"></div>
+      <div class="quality-bar-fill" style="width:${missPct}%;background:#dfe1e6"></div>
+    </div>
+    <div class="quality-legend">
+      <div class="quality-legend-item">
+        <div class="quality-dot" style="background:#00875a"></div>
+        <span>High confidence — ${(q.high||0).toLocaleString()} fields</span>
+      </div>
+      <div class="quality-legend-item">
+        <div class="quality-dot" style="background:#ff8b00"></div>
+        <span>Medium confidence — ${(q.medium||0).toLocaleString()} fields</span>
+      </div>
+      <div class="quality-legend-item">
+        <div class="quality-dot" style="background:#de350b"></div>
+        <span>Low confidence — ${(q.low||0).toLocaleString()} fields</span>
+      </div>
+      <div class="quality-legend-item">
+        <div class="quality-dot" style="background:#dfe1e6"></div>
+        <span>Not found — ${(q.not_found||0).toLocaleString()} fields</span>
+      </div>
+    </div>`;
+
+  // ── 3. Median copay by service type ─────────────────────────────────────
+  const copays = s.sbc_copays || {};
+  const serviceOrder = ['Primary Care', 'Specialist', 'Emergency Room', 'Urgent Care', 'Generic Drug'];
+  const copayLabels  = serviceOrder.filter(k => copays[k]);
+  const medianVals   = copayLabels.map(k => copays[k].median_copay);
+  const coinPcts     = copayLabels.map(k => copays[k].pct_coinsurance);
+  const serviceColors = ['#0052cc','#5243aa','#de350b','#ff8b00','#00875a'];
+
+  new Chart(document.getElementById('copayChart'), {
+    type: 'bar',
+    data: {
+      labels: copayLabels,
+      datasets: [{
+        label: 'Median Flat Copay ($)',
+        data: medianVals,
+        backgroundColor: serviceColors,
+        borderRadius: 5,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const svc = copayLabels[ctx.dataIndex];
+              const d = copays[svc];
+              const parts = [`Median copay: $${ctx.parsed.y}`];
+              if (d.pct_coinsurance > 0) parts.push(`${d.pct_coinsurance}% of plans use coinsurance instead`);
+              if (d.pct_flat_copay > 0)  parts.push(`${d.pct_flat_copay}% of plans have a flat copay`);
+              return parts;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          grid: { color: '#f0f0f0' },
+          ticks: { callback: v => '$' + v }
+        },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+}
 </script>
 </body>
 </html>
