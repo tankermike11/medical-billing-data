@@ -67,16 +67,7 @@ def ingest(source: dict, local_path: Path, file_hash: str, conn: sqlite3.Connect
             val = row.get(col, "").strip()
             if val:
                 attribute_rows.append((plan_id, PLAN_YEAR, col, val, SOURCE_ID, retrieved_at))
-        # Store remaining columns as extra JSON on the plan record
-        state = row.get("StateCode", row.get("State", "")).strip()
-        issuer_id = row.get("IssuerId", row.get("IssuerId", "")).strip()
-        if state or issuer_id:
-            conn.execute(
-                """INSERT OR IGNORE INTO plans
-                   (plan_id, plan_year, state, issuer_id, source_id, source_url, retrieved_at)
-                   VALUES (?,?,?,?,?,?,?)""",
-                (plan_id, PLAN_YEAR, state, issuer_id, SOURCE_ID, source_url, retrieved_at),
-            )
+        # plan_attributes links by plan_id; no stub inserts into plans needed
 
     conn.executemany(
         """INSERT OR REPLACE INTO plan_attributes
