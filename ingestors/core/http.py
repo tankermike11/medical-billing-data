@@ -74,6 +74,14 @@ def fetch_json(url: str) -> dict | list:
     return r.json()
 
 
+def post_json(url: str, body: dict) -> dict | list:
+    host = urlparse(url).netloc
+    _polite_delay(host)
+    r = httpx.post(url, json=body, headers={"User-Agent": UA}, follow_redirects=True, timeout=60, verify=_ssl_ctx)
+    r.raise_for_status()
+    return r.json()
+
+
 def _sha256(path: Path) -> str:
     h = hashlib.sha256()
     with open(path, "rb") as f:
