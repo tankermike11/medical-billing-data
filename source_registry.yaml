@@ -214,3 +214,40 @@ sources:
     license: public
     robots_txt_status: allowed
     user_agent: MASA-AdvocacyIngestor/0.1-pilot
+
+  # ── Family C: Ambulance ─────────────────────────────────────────────────────
+
+  - source_id: c01_ambulance_fee_schedule
+    publisher: CMS
+    canonical_url: ""
+    # TODO: confirm URL from CMS Ambulance Fee Schedule landing page:
+    # https://www.cms.gov/medicare/medicare-fee-for-service-payment/ambulancefeeSchedule/
+    # The annual PUF is typically a ZIP containing a CSV or Excel file with
+    # locality-level payment amounts per HCPCS. Update canonical_url before running.
+    format: zip
+    extraction_method: bulk_file
+    refresh_cadence: annual
+    phi_status: non-phi
+    license: public_domain
+    robots_txt_status: allowed
+    user_agent: MASA-AdvocacyIngestor/0.1-pilot
+
+  # ── Family E: Regulatory rules ──────────────────────────────────────────────
+
+  - source_id: e01_nsa_rules
+    publisher: MASA (compiled from 45 CFR Part 149 and related authorities)
+    canonical_url: "https://www.ecfr.gov/current/title-45/part-149"
+    # Manual file — no download. Place the counsel-reviewed workbook at:
+    # data/raw/e01_nsa_rules/nsa_ruleset.xlsx
+    # Workbook must include: Meta sheet (ruleset_version, effective_date,
+    # last_reviewed, reviewed_by), Index sheet (table name → category A–K),
+    # and eleven rule sheets (Table 1–10, Table K) with columns:
+    # Rule ID, Summary, Prototype logic, System action, Citation,
+    # deadline_days, deadline_basis, qpa_dependent, status
+    format: xlsx
+    extraction_method: manual_import
+    refresh_cadence: on_regulatory_change
+    phi_status: non-phi
+    license: internal_counsel_reviewed
+    robots_txt_status: n_a
+    user_agent: n_a

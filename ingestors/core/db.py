@@ -148,6 +148,46 @@ CREATE TABLE IF NOT EXISTS sbc_fields (
     page_number         INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_sbc_fields ON sbc_fields(sbc_document_id, field_name);
+
+-- Source attribution: resolves every source_id to publisher + license
+CREATE TABLE IF NOT EXISTS sources (
+    source_id        TEXT PRIMARY KEY,
+    publisher        TEXT NOT NULL,
+    canonical_url    TEXT,
+    license          TEXT,
+    refresh_cadence  TEXT,
+    notes            TEXT
+);
+
+-- Family C: Medicare ground-ambulance reference rates
+CREATE TABLE IF NOT EXISTS ambulance_fee_schedule (
+    hcpcs           TEXT NOT NULL,
+    geo_level       TEXT NOT NULL,      -- 'state' | 'urban_rural'
+    geo_key         TEXT NOT NULL,      -- e.g. 'FL', 'TX'
+    reference_rate  INTEGER NOT NULL,   -- integer cents (deliberate exception to raw-string convention)
+    effective_year  INTEGER NOT NULL,
+    source_id       TEXT NOT NULL,
+    PRIMARY KEY (hcpcs, geo_level, geo_key, effective_year)
+);
+
+-- Family E: NSA / GFE-PPDR / ground-ambulance federal ruleset (Tables A–K)
+CREATE TABLE IF NOT EXISTS nsa_rules (
+    rule_id          TEXT PRIMARY KEY,
+    category         TEXT NOT NULL,     -- A–K
+    summary          TEXT,
+    prototype_logic  TEXT,
+    system_action    TEXT,
+    citation         TEXT,
+    deadline_days    INTEGER,
+    deadline_basis   TEXT,
+    qpa_dependent    INTEGER NOT NULL DEFAULT 0,
+    ruleset_version  TEXT,
+    effective_date   TEXT,
+    last_reviewed    TEXT,
+    reviewed_by      TEXT,
+    status           TEXT NOT NULL,     -- 'draft' | 'counsel_approved'
+    source_id        TEXT NOT NULL
+);
 """
 
 

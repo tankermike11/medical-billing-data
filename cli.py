@@ -24,8 +24,12 @@ FAMILY_PREFIXES = {
                      "a09_modifiers", "a10_ms_drg", "a11_ndc"],
     "b_marketplace": ["b01_qhp_landscape", "b02_plan_attributes_puf",
                       "b03_bencs_puf", "b04_sadp_puf", "b05_marketplace_api"],
+    "c_ambulance":  ["c01_ambulance_fee_schedule"],
+    "e_rules":      ["e01_nsa_rules"],
     "f_sbc":        ["f01_url_crawler", "f02_downloader", "f03_parser"],
 }
+
+_SID_TO_FAMILY = {sid: fam for fam, sids in FAMILY_PREFIXES.items() for sid in sids}
 
 INGESTOR_MAP = {
     "a01_icd10cm":          "ingestors.a_codes.a01_icd10cm.run",
@@ -44,6 +48,8 @@ INGESTOR_MAP = {
     "b03_bencs_puf":        "ingestors.b_marketplace.b03_bencs_puf.run",
     "b04_sadp_puf":         "ingestors.b_marketplace.b04_sadp_puf.run",
     "b05_marketplace_api":  "ingestors.b_marketplace.b05_marketplace_api.run",
+    "c01_ambulance_fee_schedule": "ingestors.c_ambulance.c01_ambulance_fee_schedule.run",
+    "e01_nsa_rules":              "ingestors.e_rules.e01_nsa_rules.run",
     "f01_url_crawler":      "ingestors.f_sbc.f01_url_crawler.run",
     "f02_downloader":       "ingestors.f_sbc.f02_downloader.run",
     "f03_parser":           "ingestors.f_sbc.f03_parser.run",
@@ -81,7 +87,7 @@ def list():
     """List all available ingestor source IDs."""
     t = Table("Family", "Source ID", "Module")
     for sid, mod in INGESTOR_MAP.items():
-        family = sid.split("_")[0] + "_" + sid.split("_")[1] if sid[0] in "bf" else "a_codes"
+        family = _SID_TO_FAMILY.get(sid, "unknown")
         t.add_row(family, sid, mod)
     console.print(t)
 
