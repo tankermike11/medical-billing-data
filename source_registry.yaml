@@ -218,13 +218,13 @@ sources:
   # ── Family C: Ambulance ─────────────────────────────────────────────────────
 
   - source_id: c01_ambulance_fee_schedule
-    publisher: CMS
-    canonical_url: ""
-    # TODO: confirm URL from CMS Ambulance Fee Schedule landing page:
-    # https://www.cms.gov/medicare/medicare-fee-for-service-payment/ambulancefeeSchedule/
-    # The annual PUF is typically a ZIP containing a CSV or Excel file with
-    # locality-level payment amounts per HCPCS. Update canonical_url before running.
-    format: zip
+    publisher: CMS (via American Ambulance Association reformatted PUF)
+    canonical_url: "https://ambulance.org/wp-content/uploads/2025/01/2025.AmbulanceFeeSchedule.StateLocalHeadings.Revised.xlsx"
+    # AAA reformatted version of the CMS CY2025 Ambulance Fee Schedule PUF.
+    # Adds state and payment locality headings that the raw CMS file lacks.
+    # Raw CMS PUF landing page:
+    # https://www.cms.gov/medicare/payment/fee-schedules/ambulance/ambulance-fee-schedule-public-use-files
+    format: xlsx
     extraction_method: bulk_file
     refresh_cadence: annual
     phi_status: non-phi
