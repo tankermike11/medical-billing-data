@@ -215,6 +215,22 @@ sources:
     robots_txt_status: allowed
     user_agent: MASA-AdvocacyIngestor/0.1-pilot
 
+  # ── Family F: SBC pipeline steps ────────────────────────────────────────────
+
+  - source_id: f02_downloader
+    publisher: CMS/CCIIO (SBC PDFs via plan_materials URLs)
+    canonical_url: "https://www.healthcare.gov"
+    # Pipeline step — downloads SBC PDFs from URLs sourced from b01/b04.
+    # Appears as source_id in sbc_documents rows. Not independently runnable
+    # via run-all; executes as part of the f_sbc family sequence.
+    format: pdf
+    extraction_method: bulk_file
+    refresh_cadence: annual
+    phi_status: non-phi
+    license: public_domain
+    robots_txt_status: allowed
+    user_agent: MASA-AdvocacyIngestor/0.1-pilot
+
   # ── Family C: Ambulance ─────────────────────────────────────────────────────
 
   - source_id: c01_ambulance_fee_schedule

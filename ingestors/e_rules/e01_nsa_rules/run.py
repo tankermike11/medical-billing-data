@@ -51,7 +51,9 @@ def _cell(row, idx: int | None):
     if idx is None or idx >= len(row):
         return None
     v = row[idx].value
-    return v if v is not None else None
+    if v is None or str(v).strip().lower() == "none":
+        return None
+    return v
 
 
 def _str(row, idx: int | None) -> str | None:
@@ -96,8 +98,11 @@ def _read_index(wb) -> dict[str, str]:
     for row in ws.iter_rows(values_only=False):
         if len(row) >= 2 and row[0].value and row[1].value:
             table_name = str(row[0].value).strip()
-            category   = str(row[1].value).strip().upper()
-            index[table_name] = category
+            # Index values are like "A. Applicability and routing rules" — extract just the letter
+            category_str = str(row[1].value).strip()
+            category = category_str[0].upper() if category_str else None
+            if category:
+                index[table_name] = category
     return index or _DEFAULT_CATEGORY.copy()
 
 
