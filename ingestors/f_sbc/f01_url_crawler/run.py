@@ -25,6 +25,10 @@ MAX_URLS = None  # set to an int (e.g. 50) to cap during pilot testing
 def _check_url(client: httpx.Client, url: str) -> tuple[int, str]:
     try:
         r = client.head(url, follow_redirects=True, timeout=REQUEST_TIMEOUT)
+        if r.status_code == 405:
+            # Server doesn't support HEAD — try GET with streaming to avoid downloading body
+            with client.stream("GET", url, follow_redirects=True, timeout=REQUEST_TIMEOUT) as r2:
+                return r2.status_code, r2.headers.get("content-type", "")
         return r.status_code, r.headers.get("content-type", "")
     except Exception as e:
         return 0, str(e)[:120]
@@ -35,7 +39,7 @@ def main():
 
     urls = conn.execute(
         """SELECT id, plan_id, url FROM plan_materials
-           WHERE material_type='sbc' AND plan_year=? AND (http_status IS NULL OR http_status=0)
+           WHERE material_type='sbc' AND plan_year=? AND (http_status IS NULL OR http_status IN (0, 405))
            ORDER BY id""",
         (PLAN_YEAR,),
     ).fetchall()

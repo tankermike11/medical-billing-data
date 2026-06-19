@@ -152,6 +152,23 @@ sources:
 
   # ── Family B: Marketplace QHP ───────────────────────────────────────────────
 
+  - source_id: b06_ca_coveredca
+    publisher: Covered California (HBEX)
+    canonical_url: "https://hbex.coveredca.com/data-research/library/2025%20Individual%20Product%20Prices.xlsx"
+    # Covered California QHP individual rates file for PY2025.
+    # Header row is at row 7 (rows 1-6 are title/metadata block).
+    # Columns: Plan ID, Rating Area ID, Age, Individual Rate, Applicant (carrier),
+    #          HOIS ID (issuer ID), Metal Level, Network (plan type), Benefit Design, Full Plan Name.
+    # NOTE: No SBC URLs in this file — SBCs are carrier-hosted with no bulk access path.
+    # Landing page: https://hbex.coveredca.com/data-research/
+    format: xlsx
+    extraction_method: bulk_file
+    refresh_cadence: annual
+    phi_status: non-phi
+    license: public
+    robots_txt_status: allowed
+    user_agent: MASA-AdvocacyIngestor/0.1-pilot
+
   - source_id: b01_qhp_landscape
     publisher: CMS/CCIIO
     canonical_url: "https://data.healthcare.gov/datafile/py2025/individual_market_medical.zip"

@@ -94,6 +94,14 @@ def _extract_text(pdf_path: Path) -> tuple[str, int]:
     return text, pages
 
 
+def _normalize_text(text: str) -> str:
+    """Insert spaces at word boundaries lost during PDF character extraction."""
+    text = re.sub(r'([a-z])([A-Z])', r'\1 \2', text)
+    text = re.sub(r'([a-zA-Z])(\$)', r'\1 \2', text)
+    text = re.sub(r'(\d)([A-Z])', r'\1 \2', text)
+    return text
+
+
 def _find_field(text: str, field_name: str) -> tuple[str | None, float]:
     patterns = FIELD_PATTERNS.get(field_name, [])
     for i, pat in enumerate(patterns):
@@ -105,9 +113,9 @@ def _find_field(text: str, field_name: str) -> tuple[str | None, float]:
     return None, 0.0
 
 
-def _has_sbc_markers(text: str) -> bool:
+def _has_sbc_markers(text: str, min_count: int = 3) -> bool:
     found = sum(1 for h in SECTION_HEADERS if h in text)
-    return found >= 3
+    return found >= min_count
 
 
 def parse_sbc(pdf_path: Path) -> dict[str, tuple[str | None, float]]:
@@ -120,7 +128,12 @@ def parse_sbc(pdf_path: Path) -> dict[str, tuple[str | None, float]]:
         return {"_error": ("Empty PDF text — may need OCR", 0.0)}
 
     if not _has_sbc_markers(text):
-        return {"_error": ("Document does not appear to be a standard SBC template", CONFIDENCE_LOW)}
+        # Some PDFs lose inter-word spacing; try normalizing before giving up
+        normalized = _normalize_text(text)
+        if _has_sbc_markers(normalized, min_count=2):
+            text = normalized
+        else:
+            return {"_error": ("Document does not appear to be a standard SBC template", CONFIDENCE_LOW)}
 
     results = {}
     for field in FIELD_PATTERNS:
