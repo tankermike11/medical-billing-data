@@ -129,14 +129,14 @@
     {
       "id": "f03_parser",
       "label": "SBC Field Extraction",
-      "rows": 2055,
+      "rows": 2278,
       "retrieved_at": "2026-06-19"
     }
   ],
   "total_codes": 301842,
   "total_plans": 5486,
   "total_plan_benefits": 1645743,
-  "sbc_parsed": 2155,
+  "sbc_parsed": 2278,
   "plans_by_metal": {
     "Silver": 1647,
     "Gold": 1394,
@@ -231,46 +231,46 @@
   "sbc_copays": {
     "Primary Care": {
       "median_copay": 40,
-      "pct_flat_copay": 80,
+      "pct_flat_copay": 88,
       "pct_coinsurance": 12,
-      "pct_not_extracted": 2,
-      "sample_size": 2155
+      "pct_not_extracted": 7,
+      "sample_size": 2278
     },
     "Specialist": {
-      "median_copay": 75,
-      "pct_flat_copay": 29,
+      "median_copay": 70,
+      "pct_flat_copay": 81,
       "pct_coinsurance": 19,
-      "pct_not_extracted": 0,
-      "sample_size": 2155
+      "pct_not_extracted": 1,
+      "sample_size": 2278
     },
     "Emergency Room": {
       "median_copay": 500,
-      "pct_flat_copay": 18,
+      "pct_flat_copay": 23,
       "pct_coinsurance": 77,
-      "pct_not_extracted": 2,
-      "sample_size": 2155
+      "pct_not_extracted": 7,
+      "sample_size": 2278
     },
     "Urgent Care": {
-      "median_copay": 65,
-      "pct_flat_copay": 46,
-      "pct_coinsurance": 49,
-      "pct_not_extracted": 6,
-      "sample_size": 2155
+      "median_copay": 60,
+      "pct_flat_copay": 53,
+      "pct_coinsurance": 47,
+      "pct_not_extracted": 7,
+      "sample_size": 2278
     },
     "Generic Drug": {
       "median_copay": 25,
-      "pct_flat_copay": 77,
-      "pct_coinsurance": 18,
-      "pct_not_extracted": 6,
-      "sample_size": 2155
+      "pct_flat_copay": 83,
+      "pct_coinsurance": 17,
+      "pct_not_extracted": 4,
+      "sample_size": 2278
     }
   },
   "sbc_quality": {
-    "high": 12264,
-    "medium": 2659,
-    "low": 0,
-    "not_found": 6627,
-    "total": 21550,
-    "plans_parsed": 2155
+    "high": 12411,
+    "medium": 6454,
+    "low": 106,
+    "not_found": 3915,
+    "total": 22886,
+    "plans_parsed": 2278
   }
 }
