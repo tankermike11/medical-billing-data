@@ -75,7 +75,7 @@ def main():
                 else:
                     r = client.get(url)
                     r.raise_for_status()
-                    if b"%PDF" not in r.content[:10] and b"pdf" not in r.headers.get("content-type", "").lower():
+                    if b"%PDF" not in r.content[:10] and "pdf" not in r.headers.get("content-type", "").lower():
                         raise ValueError(f"Response is not a PDF (content-type: {r.headers.get('content-type')})")
                     dest.write_bytes(r.content)
                     file_hash = hashlib.sha256(r.content).hexdigest()
