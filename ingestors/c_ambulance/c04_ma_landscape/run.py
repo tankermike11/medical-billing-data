@@ -23,6 +23,8 @@ SOURCE_ID = "c04_ma_landscape"
 
 # CMS column-name candidates across release years (lower-cased for matching)
 _COL_MAP: dict[str, list[str]] = {
+    "contract_category": ["contract category type", "contract category", "plan category",
+                          "category type"],
     "contract_id":       ["contract id", "contract_id", "h_number"],
     "plan_id":           ["plan id", "plan_id", "pbp"],
     "segment_id":        ["segment id", "segment_id", "segment"],
@@ -30,15 +32,20 @@ _COL_MAP: dict[str, list[str]] = {
                           "org name", "issuer name"],
     "plan_name":         ["plan name", "plan marketing name", "marketing name"],
     "plan_type":         ["plan type", "plan_type", "type"],
-    "state":             ["state", "state code"],
+    "state":             ["state territory abbreviation", "state", "state code",
+                          "state abbreviation"],
     "county_name":       ["county name", "county/parish name", "county"],
     "fips_code":         ["fips state county code", "fips", "fips_code", "county fips"],
     "snp_type":          ["snp type", "snp_type", "special needs plan type"],
-    "premium_raw":       ["monthly consolidated premium", "premium", "part c premium",
-                          "total monthly premium"],
+    "premium_raw":       ["monthly consolidated premium", "part c premium",
+                          "total monthly premium", "premium"],
     "star_rating":       ["overall star rating", "star rating", "overall rating"],
-    "plan_year":         ["plan year", "plan_year", "contract year"],
+    "plan_year":         ["contract year", "plan year", "plan_year"],
 }
+
+# Contract category types that represent MA/MAPD plans (not standalone PDPs)
+_MA_CATEGORIES = {"ma", "mapd", "local ppo", "regional ppo", "pffs", "msa",
+                  "hmo", "hmo pos", "i-snp", "c-snp", "d-snp"}
 
 _PLAN_TYPE_NORM = {
     "hmo": "HMO", "hmo-pos": "HMO", "local ppo": "PPO", "regional ppo": "PPO",
@@ -136,12 +143,15 @@ def ingest(source: dict, local_path: Path, file_hash: str, conn: sqlite3.Connect
 
     cols = {field: _resolve_col(header_lower, cands) for field, cands in _COL_MAP.items()}
 
-    missing = [f for f, i in cols.items() if i is None and f not in ("segment_id", "fips_code", "snp_type", "star_rating")]
+    missing = [f for f, i in cols.items() if i is None
+               and f not in ("segment_id", "fips_code", "snp_type", "star_rating",
+                             "contract_category")]
     if missing:
         raise ValueError(f"[{SOURCE_ID}] Cannot resolve required columns: {missing}. Header: {header}")
 
     db_rows: list[tuple] = []
     skipped = 0
+    skipped_pdp = 0
 
     for row in rows:
         def cell(field: str) -> str | None:
@@ -150,6 +160,12 @@ def ingest(source: dict, local_path: Path, file_hash: str, conn: sqlite3.Connect
                 return None
             v = row[i]
             return str(v).strip() if v is not None else None
+
+        # Skip standalone PDP plans — this table is MA/MAPD only
+        category = (cell("contract_category") or "").strip().lower()
+        if category == "pdp":
+            skipped_pdp += 1
+            continue
 
         contract_id = cell("contract_id") or ""
         plan_id = cell("plan_id") or ""
@@ -162,18 +178,19 @@ def ingest(source: dict, local_path: Path, file_hash: str, conn: sqlite3.Connect
         if plan_year_raw and re.match(r"^\d{4}$", plan_year_raw.strip()):
             plan_year = int(plan_year_raw)
         else:
-            # Infer from ZIP filename (e.g. "2025-landscape-source-file.zip")
             m = re.search(r"(20\d{2})", local_path.name)
             plan_year = int(m.group(1)) if m else 2025
 
         segment_id = cell("segment_id") or ""
-        ma_plan_id = f"{contract_id}_{plan_id}_{segment_id}_{plan_year}"
 
         state_raw = cell("state") or ""
         if not state_raw:
             skipped += 1
             continue
         state = _norm_state(state_raw)
+
+        # Include state in primary key — 2026+ format is one row per plan per state
+        ma_plan_id = f"{contract_id}_{plan_id}_{segment_id}_{state}_{plan_year}"
 
         county = cell("county_name") or ""
         plan_name = cell("plan_name") or ""
@@ -198,6 +215,8 @@ def ingest(source: dict, local_path: Path, file_hash: str, conn: sqlite3.Connect
             SOURCE_ID,
         ))
 
+    if skipped_pdp:
+        print(f"[{SOURCE_ID}] skipped {skipped_pdp} PDP (standalone Part D) rows — MA/MAPD only")
     if skipped:
         print(f"[{SOURCE_ID}] skipped {skipped} rows with missing contract_id / plan_id / state")
 
