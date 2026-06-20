@@ -265,6 +265,23 @@ sources:
     robots_txt_status: allowed
     user_agent: MASA-AdvocacyIngestor/0.1-pilot
 
+  - source_id: c02_physician_fee_schedule
+    publisher: CMS
+    canonical_url: "https://www.cms.gov/files/zip/pfrev25a.zip"
+    # CMS CY2025 Medicare Physician Fee Schedule National Payment Amount file (PFREV25A).
+    # Pipe-delimited text inside ZIP. Contains non-facility and facility allowed
+    # amounts for every active HCPCS/CPT code. No AMA CPT descriptions are ingested —
+    # only HCPCS_CD, MOD, STATUS_CODE, NON_FAC_TOTAL, FAC_TOTAL columns.
+    # Landing page: cms.gov/medicare/payment/fee-schedules/physician/national-payment-amount-file/pfrev25a
+    # URL verified 2026-06-20 (HEAD 200).
+    format: zip
+    extraction_method: bulk_file
+    refresh_cadence: annual
+    phi_status: non-phi
+    license: public_domain
+    robots_txt_status: allowed
+    user_agent: MASA-AdvocacyIngestor/0.1-pilot
+
   # ── Family E: Regulatory rules ──────────────────────────────────────────────
 
   - source_id: e01_nsa_rules

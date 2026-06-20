@@ -273,6 +273,23 @@ CREATE TABLE IF NOT EXISTS ncci_ptp_edits (
 CREATE INDEX IF NOT EXISTS idx_ncci_ptp_col1 ON ncci_ptp_edits (column_one_code, deletion_date);
 CREATE INDEX IF NOT EXISTS idx_ncci_ptp_col2 ON ncci_ptp_edits (column_two_code, deletion_date);
 
+-- C.2: Medicare Physician Fee Schedule national payment amounts
+-- Rates stored as INTEGER CENTS. non_fac_rate = office/non-facility allowed amount;
+-- fac_rate = hospital/facility allowed amount. NULL where CMS marks N/A.
+-- status_code: A=active, B=bundled, C=contractor-priced, N=non-covered, etc.
+-- No AMA CPT descriptions stored — code number only (same carve-out as a04_cpt_handling).
+CREATE TABLE IF NOT EXISTS physician_fee_schedule (
+    hcpcs          TEXT NOT NULL,
+    modifier       TEXT NOT NULL DEFAULT '',
+    non_fac_rate   INTEGER,         -- cents; NULL if not applicable or contractor-priced
+    fac_rate       INTEGER,         -- cents; NULL if not applicable or contractor-priced
+    status_code    TEXT,
+    effective_year INTEGER NOT NULL,
+    source_id      TEXT NOT NULL,
+    PRIMARY KEY (hcpcs, modifier, effective_year)
+);
+CREATE INDEX IF NOT EXISTS idx_pfs_hcpcs ON physician_fee_schedule(hcpcs, effective_year);
+
 -- C.6: NCCI MUE (Medically Unlikely Edits)
 CREATE TABLE IF NOT EXISTS ncci_mue (
     mue_id                     TEXT PRIMARY KEY,  -- hcpcs_effective_date

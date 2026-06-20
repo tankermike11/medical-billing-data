@@ -25,7 +25,8 @@ FAMILY_PREFIXES = {
     "b_marketplace": ["b01_qhp_landscape", "b02_plan_attributes_puf",
                       "b03_bencs_puf", "b04_sadp_puf", "b05_marketplace_api",
                       "b06_ca_coveredca"],
-    "c_ambulance":  ["c01_ambulance_fee_schedule", "c04_ma_landscape", "c06_ncci_edits"],
+    "c_ambulance":  ["c01_ambulance_fee_schedule", "c02_physician_fee_schedule",
+                     "c04_ma_landscape", "c06_ncci_edits"],
     "e_rules":      ["e01_nsa_rules", "e02_ncd_ambulance", "e03_medicare_appeals", "e04_aca_appeals"],
     "f_sbc":        ["f01_url_crawler", "f02_downloader", "f03_parser"],
 }
@@ -51,6 +52,7 @@ INGESTOR_MAP = {
     "b05_marketplace_api":  "ingestors.b_marketplace.b05_marketplace_api.run",
     "b06_ca_coveredca":     "ingestors.b_marketplace.b06_ca_coveredca.run",
     "c01_ambulance_fee_schedule": "ingestors.c_ambulance.c01_ambulance_fee_schedule.run",
+    "c02_physician_fee_schedule": "ingestors.c_ambulance.c02_physician_fee_schedule.run",
     "c04_ma_landscape":           "ingestors.c_ambulance.c04_ma_landscape.run",
     "c06_ncci_edits":             "ingestors.c_ambulance.c06_ncci_edits.run",
     "e01_nsa_rules":              "ingestors.e_rules.e01_nsa_rules.run",
