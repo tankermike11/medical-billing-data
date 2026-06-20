@@ -36,29 +36,102 @@ REVIEW_THRESHOLD = 0.5
 CURRENCY_RE = re.compile(r"\$[\d,]+(?:\.\d{2})?|No [Cc]harge|Not [Cc]overed|\d+%")
 
 FIELD_PATTERNS: dict[str, list[re.Pattern]] = {
-    # Deductible: anchored to "In-network: $X Individual / $Y Family" near "deductible"
+    # Deductible individual in-network.
+    # Format 1 (most common): "In-network: $X Individual" near "deductible"
+    # Format 2 (AZ BCBS): "$X/individual and $Y/family" after "deductible?" label
+    # Format 3 (AL Blue): "$X / individual or $Y / family"
+    # Format 4 (AL Blue Self-Only): "$X / Self-Only or $Y / Family"
     "deductible_individual_inn": [
         re.compile(r"[Dd]eductible.{0,100}[Ii]n.network:\s*(\$[\d,]+)\s+[Ii]ndividual", re.DOTALL),
+        # AZ BCBS: value after "deductible" keyword (no "?" anchor — ? appears after value in linearized tables)
+        re.compile(r"[Dd]eductible.{0,600}(\$[\d,]+)/[Ii]ndividual\s+and", re.DOTALL),
+        # AL Blue: "$X / individual or $Y / family" (family may be cut off by adjacent column text)
+        re.compile(r"(\$[\d,]+)\s*/\s*[Ii]ndividual\s+or\s+\$[\d,]+\s*/", re.IGNORECASE),
+        # AL Blue Self-Only variant
+        re.compile(r"(\$[\d,]+)\s*/\s*[Ss]elf.Only\s+or\s+\$[\d,]+\s*/", re.IGNORECASE),
         re.compile(r"[Dd]eductible.{0,200}(\$[\d,]+)\s+[Ii]ndividual", re.DOTALL),
     ],
     "deductible_family_inn": [
-        # capture the second value: "Individual / $Y"
         re.compile(r"[Dd]eductible.{0,100}[Ii]n.network:\s*\$[\d,]+\s+[Ii]ndividual\s*/\s*(\$[\d,]+)", re.DOTALL),
+        re.compile(r"[Dd]eductible.{0,600}\$[\d,]+/[Ii]ndividual\s+and\s+(\$[\d,]+)/[Ff]amily", re.DOTALL),
+        re.compile(r"\$[\d,]+\s*/\s*[Ii]ndividual\s+or\s+(\$[\d,]+)\s*/\s*[Ff]amily", re.IGNORECASE),
+        re.compile(r"\$[\d,]+\s*/\s*[Ss]elf.Only\s+or\s+(\$[\d,]+)\s*/\s*[Ff]amily", re.IGNORECASE),
         re.compile(r"[Dd]eductible.{0,200}[Ii]ndividual\s*/\s*(\$[\d,]+)", re.DOTALL),
     ],
-    # OOP max: PDF extraction puts "In-network: $X Individual / $Y" BEFORE "out-of-pocket" on
-    # the same line ("In-network: $6,300 Individual / $12,600 The out-of-pocket limit is...")
-    # so we look for "In-network: $X Individual" and require "out-of-pocket" within 200 chars AFTER.
-    # The deductible "In-network: $X Individual" line does NOT have "out-of-pocket" nearby.
+    # OOP max individual in-network.
+    # Format 1 (most common): "In-network: $X Individual ... out-of-pocket" (value before question)
+    # Format 2 (AK/Tier, value before question): "Tier 1: $X individual / $Y family ... out-of-pocket"
+    # Format 3 (AK/Tier, value after question): "out-of-pocket ... Tier 1: $X individual"
+    # Format 4 (AZ BCBS, value after question): "out-of-pocket ... $X/individual and"
     "oop_max_individual_inn": [
         re.compile(r"[Ii]n.network:\s*(\$[\d,]+)\s+[Ii]ndividual.{0,200}out.of.pocket", re.DOTALL | re.IGNORECASE),
+        re.compile(r"Tier \d+:\s*(\$[\d,]+)\s+individual\s*/\s*\$[\d,]+\s+family.{0,300}out.of.pocket", re.DOTALL | re.IGNORECASE),
+        re.compile(r"out.of.pocket.{0,300}Tier \d+:\s*(\$[\d,]+)\s+individual", re.DOTALL | re.IGNORECASE),
+        re.compile(r"out.of.pocket.{0,200}(\$[\d,]+)/[Ii]ndividual\s+and", re.DOTALL | re.IGNORECASE),
+        # AL Blue: "For in-network $6,000 individual / $12,000 family" before "out-of-pocket" question
+        re.compile(r"[Ff]or in.network\s+(\$[\d,]+)\s+individual\s*/\s*\$[\d,]+.{0,300}out.of.pocket", re.DOTALL | re.IGNORECASE),
+        # AL Blue: value appears after "out-of-pocket" question text
+        re.compile(r"out.of.pocket.{0,300}[Ff]or in.network\s+(\$[\d,]+)\s+individual", re.DOTALL | re.IGNORECASE),
+        # Generic: "$X individual / $Y family" near out-of-pocket
+        re.compile(r"out.of.pocket.{0,200}(\$[\d,]+)\s+individual\s*/\s*\$[\d,]+\s+family", re.DOTALL | re.IGNORECASE),
+        # AL Blue: "For network providers: $9,200 [text] individual / $18,400"
+        # "individual" can be separated by hundreds of chars of linearized left-column text
+        re.compile(r"[Ff]or network providers:\s*(\$[\d,]+).{0,600}individual\s*/", re.DOTALL | re.IGNORECASE),
+        re.compile(r"out.of.pocket.{0,400}[Ff]or network providers:\s*(\$[\d,]+)", re.DOTALL | re.IGNORECASE),
+        # AL Self-Only: "limit for this plan? $7,200 Self-Only / $14,400 Family"
+        re.compile(r"limit for this plan\?\s*(\$[\d,]+)\s+Self.Only", re.DOTALL | re.IGNORECASE),
+        re.compile(r"out.of.pocket.{0,400}[Ff]or in.network\s+(\$[\d,]+)", re.DOTALL | re.IGNORECASE),
+        # AZ BCBS: "In-Network: Individual $7,495 / Family $14,990"
+        re.compile(r"[Ii]n.Network:\s+[Ii]ndividual\s+(\$[\d,]+)\s*/\s*[Ff]amily", re.DOTALL | re.IGNORECASE),
+        # "$X/Individual, $Y/Family" — comma-separated with capital I/F, value before question
+        re.compile(r"(\$[\d,]+)/[Ii]ndividual,\s*\$[\d,]+/[Ff]amily.{0,400}out.of.pocket", re.DOTALL | re.IGNORECASE),
+        re.compile(r"out.of.pocket.{0,400}(\$[\d,]+)/[Ii]ndividual,\s*\$[\d,]+/[Ff]amily", re.DOTALL | re.IGNORECASE),
+        # "$X Per Person/$Y" answer column appears BEFORE out-of-pocket question in linearized text
+        re.compile(r"(\$[\d,]+)\s+[Pp]er\s+[Pp]erson\s*/\s*\$[\d,]+.{0,400}out.of.pocket", re.DOTALL | re.IGNORECASE),
+        # "$X per person | $Y per group" — pipe separator, no comma in dollars
+        re.compile(r"(\$[\d,]+)\s+per\s+person\s*\|.{0,400}out.of.pocket", re.DOTALL | re.IGNORECASE),
+        # "$X/person or $Y/family" format
+        re.compile(r"(\$[\d,]+)/[Pp]erson\s+or\s+\$[\d,]+/[Ff]amily.{0,400}out.of.pocket", re.DOTALL | re.IGNORECASE),
+        re.compile(r"out.of.pocket.{0,400}(\$[\d,]+)/[Pp]erson\s+or\s+\$[\d,]+/[Ff]amily", re.DOTALL | re.IGNORECASE),
+        # "pocket limit for this $9,050 person/ $18,100 family" — question wraps, value embedded
+        re.compile(r"pocket limit for this\s+(\$[\d,]+)\s+person/", re.DOTALL | re.IGNORECASE),
+        # "Network providers: $X" (without leading "For")
+        re.compile(r"[Nn]etwork providers:\s*(\$[\d,]+).{0,600}individual\s*/", re.DOTALL | re.IGNORECASE),
         re.compile(r"[Ii]n.network:\s*(\$[\d,]+)\s+[Ii]ndividual.{0,300}[Oo]ut.of.[Pp]ocket", re.DOTALL),
     ],
     "oop_max_family_inn": [
         re.compile(r"[Ii]n.network:\s*\$[\d,]+\s+[Ii]ndividual\s*/\s*(\$[\d,]+).{0,200}out.of.pocket", re.DOTALL | re.IGNORECASE),
+        re.compile(r"Tier \d+:\s*\$[\d,]+\s+individual\s*/\s*(\$[\d,]+)\s+family.{0,300}out.of.pocket", re.DOTALL | re.IGNORECASE),
+        re.compile(r"out.of.pocket.{0,300}Tier \d+:\s*\$[\d,]+\s+individual\s*/\s*(\$[\d,]+)\s+family", re.DOTALL | re.IGNORECASE),
+        re.compile(r"out.of.pocket.{0,200}\$[\d,]+/[Ii]ndividual\s+and\s+(\$[\d,]+)/[Ff]amily", re.DOTALL | re.IGNORECASE),
+        re.compile(r"[Ff]or in.network\s+\$[\d,]+\s+individual\s*/\s*(\$[\d,]+)\s+family.{0,300}out.of.pocket", re.DOTALL | re.IGNORECASE),
+        re.compile(r"out.of.pocket.{0,300}[Ff]or in.network\s+\$[\d,]+\s+individual\s*/\s*(\$[\d,]+)\s+family", re.DOTALL | re.IGNORECASE),
+        re.compile(r"out.of.pocket.{0,200}\$[\d,]+\s+individual\s*/\s*(\$[\d,]+)\s+family", re.DOTALL | re.IGNORECASE),
+        # AL Blue family: dollar follows "individual /"
+        re.compile(r"[Ff]or network providers:\s*\$[\d,]+.{0,600}individual\s*/\s*(\$[\d,]+)", re.DOTALL | re.IGNORECASE),
+        re.compile(r"out.of.pocket.{0,400}[Ff]or network providers:\s*\$[\d,]+.{0,300}individual\s*/\s*(\$[\d,]+)", re.DOTALL | re.IGNORECASE),
+        # AL Self-Only family
+        re.compile(r"limit for this plan\?\s*\$[\d,]+\s+Self.Only\s*/\s*(\$[\d,]+)", re.DOTALL | re.IGNORECASE),
+        # AZ BCBS family
+        re.compile(r"[Ii]n.Network:\s+[Ii]ndividual\s+\$[\d,]+\s*/\s*[Ff]amily\s+(\$[\d,]+)", re.DOTALL | re.IGNORECASE),
+        # "$X/Individual, $Y/Family" family value
+        re.compile(r"\$[\d,]+/[Ii]ndividual,\s*(\$[\d,]+)/[Ff]amily.{0,400}out.of.pocket", re.DOTALL | re.IGNORECASE),
+        re.compile(r"out.of.pocket.{0,400}\$[\d,]+/[Ii]ndividual,\s*(\$[\d,]+)/[Ff]amily", re.DOTALL | re.IGNORECASE),
+        # "Per Person/$Y" family value
+        re.compile(r"\$[\d,]+\s+[Pp]er\s+[Pp]erson\s*/\s*(\$[\d,]+).{0,400}out.of.pocket", re.DOTALL | re.IGNORECASE),
+        # "per person | $Y per group" family
+        re.compile(r"\$[\d,]+\s+per\s+person\s*\|\s*(\$[\d,]+).{0,400}out.of.pocket", re.DOTALL | re.IGNORECASE),
+        # "$X/person or $Y/family" family
+        re.compile(r"\$[\d,]+/[Pp]erson\s+or\s+(\$[\d,]+)/[Ff]amily.{0,400}out.of.pocket", re.DOTALL | re.IGNORECASE),
+        re.compile(r"out.of.pocket.{0,400}\$[\d,]+/[Pp]erson\s+or\s+(\$[\d,]+)/[Ff]amily", re.DOTALL | re.IGNORECASE),
+        # "pocket limit for this $X person/ $Y family" family value
+        re.compile(r"pocket limit for this\s+\$[\d,]+\s+person/\s*(\$[\d,]+)\s+family", re.DOTALL | re.IGNORECASE),
+        # "Network providers: $X [text] individual / $Y" family
+        re.compile(r"[Nn]etwork providers:\s*\$[\d,]+.{0,600}individual\s*/\s*(\$[\d,]+)", re.DOTALL | re.IGNORECASE),
         re.compile(r"[Ii]n.network:\s*\$[\d,]+\s+[Ii]ndividual\s*/\s*(\$[\d,]+).{0,300}[Oo]ut.of.[Pp]ocket", re.DOTALL),
     ],
-    # Copays: DOTALL with limited window so amount can be on a following line
+    # Copays: DOTALL with limited window so amount can be on a following line.
+    # Generic drug also handles table-linearized format where copay appears before service name.
     "copay_primary_care": [
         re.compile(r"[Pp]rimary [Cc]are [Vv]isit.{0,300}?(\$[\d,]+|No [Cc]harge|\d+%)", re.DOTALL),
         re.compile(r"[Pp]rimary [Cc]are.{0,300}?(\$[\d,]+|No [Cc]harge|\d+%)", re.DOTALL),
@@ -73,10 +146,20 @@ FIELD_PATTERNS: dict[str, list[re.Pattern]] = {
     ],
     "copay_urgent_care": [
         re.compile(r"[Uu]rgent [Cc]are.{0,200}?(\$[\d,]+|No [Cc]harge|\d+%)", re.DOTALL),
+        re.compile(r"[Uu]rgent [Cc]are [Cc]enter.{0,200}?(\$[\d,]+|No [Cc]harge|\d+%)", re.DOTALL),
+        # Table-linearized: dollar amount appears before "Urgent Care" label
+        re.compile(r"(\$[\d,]+|No [Cc]harge|\d+%)\s*/?\s*visit.{0,150}[Uu]rgent [Cc]are", re.DOTALL),
+        re.compile(r"(\$[\d,]+|No [Cc]harge|\d+%).{0,80}[Uu]rgent [Cc]are", re.DOTALL),
     ],
     "copay_generic_drug": [
         re.compile(r"[Gg]eneric [Dd]rug.{0,200}?(\$[\d,]+|No [Cc]harge|\d+%)", re.DOTALL),
         re.compile(r"[Pp]referred [Gg]eneric.{0,200}?(\$[\d,]+|No [Cc]harge|\d+%)", re.DOTALL),
+        # Table-linearized format: copay value appears before service name
+        re.compile(r"(\$[\d,]+)\s+copay.{0,80}[Gg]eneric\s+drug", re.DOTALL),
+        # DE format: "$25 ... Generic drugs copayment/prescription"
+        re.compile(r"(\$[\d,]+).{0,100}[Gg]eneric\s+drugs?\s+copay", re.DOTALL | re.IGNORECASE),
+        # DE "Tier 1 No charge" in drug formulary table
+        re.compile(r"[Ii]f you need drugs.{0,200}[Tt]ier 1\s+(No\s+[Cc]harge|\$[\d,]+)", re.DOTALL | re.IGNORECASE),
         re.compile(r"[Gg]eneric.{0,200}?(\$[\d,]+|No [Cc]harge|\d+%)", re.DOTALL),
     ],
 }
