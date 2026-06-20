@@ -433,7 +433,7 @@ async function loadStats() {
   document.getElementById('stat-codes').textContent    = fmt(s.total_codes);
   document.getElementById('stat-plans').textContent    = fmt(s.total_plans);
   document.getElementById('stat-benefits').textContent = fmt(s.total_plan_benefits);
-  document.getElementById('stat-sources').textContent  = s.sources.filter(x => x.rows > 0 && !x.id.startsWith('f')).length;
+  document.getElementById('stat-sources').textContent  = s.active_sources || s.sources.filter(x => x.rows > 0).length;
 
   // Dashboard stats
   document.getElementById('d-codes').textContent    = fmt(s.total_codes);
