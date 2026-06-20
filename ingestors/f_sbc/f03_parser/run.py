@@ -137,6 +137,35 @@ FIELD_PATTERNS: dict[str, list[re.Pattern]] = {
         # "Network providers: $X" (without leading "For")
         re.compile(r"[Nn]etwork providers:\s*(\$[\d,]+).{0,600}individual\s*/", re.DOTALL | re.IGNORECASE),
         re.compile(r"[Ii]n.network:\s*(\$[\d,]+)\s+[Ii]ndividual.{0,300}[Oo]ut.of.[Pp]ocket", re.DOTALL),
+        # Quartz (space-free PDF text): "Individual: $X" value before "out-of-pocket" question
+        re.compile(r"Individual:\s*(\$[\d,]+).{0,400}out.of.pocket", re.DOTALL),
+        re.compile(r"out.of.pocket.{0,400}Individual:\s*(\$[\d,]+)", re.DOTALL),
+        # NE: "In-Network:$X/$Y" slash-separated without word labels near out-of-pocket
+        re.compile(r"out.of.pocket.{0,200}[Ii]n.network:\s*(\$[\d,]+)/\s*\$[\d,]+", re.DOTALL | re.IGNORECASE),
+        re.compile(r"[Ii]n.network:\s*(\$[\d,]+)/\s*\$[\d,]+.{0,200}out.of.pocket", re.DOTALL | re.IGNORECASE),
+        # MI/UT/FL: "$X person / $Y family" or "$X person/$Y family" (space-optional around /)
+        re.compile(r"out.of.pocket.{0,400}(\$[\d,]+)\s+person\s*/\s*\$[\d,]+\s+family", re.DOTALL | re.IGNORECASE),
+        re.compile(r"(\$[\d,]+)\s+person\s*/\s*\$[\d,]+\s+family.{0,400}out.of.pocket", re.DOTALL | re.IGNORECASE),
+        # WI Network Health: "$X member / $Y family"
+        re.compile(r"out.of.pocket.{0,400}(\$[\d,]+)\s+member\s*/\s*\$[\d,]+\s+family", re.DOTALL | re.IGNORECASE),
+        re.compile(r"(\$[\d,]+)\s+member\s*/\s*\$[\d,]+\s+family.{0,400}out.of.pocket", re.DOTALL | re.IGNORECASE),
+        # IL 36096: "Individual: Participating $X" value before out-of-pocket section
+        re.compile(r"[Ii]ndividual:\s*Participating\s+(\$[\d,]+).{0,400}out.of.pocket", re.DOTALL | re.IGNORECASE),
+        re.compile(r"out.of.pocket.{0,400}[Ii]ndividual:\s*Participating\s+(\$[\d,]+)", re.DOTALL | re.IGNORECASE),
+        # MT: "Network provider: $X/ individual or $Y family" (singular provider)
+        re.compile(r"[Nn]etwork\s+provider:\s*(\$[\d,]+)/.{0,200}out.of.pocket", re.DOTALL | re.IGNORECASE),
+        re.compile(r"out.of.pocket.{0,300}[Nn]etwork\s+provider:\s*(\$[\d,]+)/", re.DOTALL | re.IGNORECASE),
+        # LA 19636: "For network providers $X individual" (no colon variant)
+        re.compile(r"out.of.pocket.{0,300}[Ff]or\s+network\s+providers\s+(\$[\d,]+)", re.DOTALL | re.IGNORECASE),
+        re.compile(r"[Ff]or\s+network\s+providers\s+(\$[\d,]+).{0,300}out.of.pocket", re.DOTALL | re.IGNORECASE),
+        # WI/TX/LA: "$X/individual or $Y/family" ("or" variant — existing only covers "and" and comma)
+        re.compile(r"out.of.pocket.{0,400}(\$[\d,]+)/[Ii]ndividual\s+or\s+\$[\d,]+/[Ff]amily", re.DOTALL | re.IGNORECASE),
+        re.compile(r"(\$[\d,]+)/[Ii]ndividual\s+or\s+\$[\d,]+/[Ff]amily.{0,400}out.of.pocket", re.DOTALL | re.IGNORECASE),
+        # WI 20173: "In-network medical/pharmacy: $X" before question; family on question line
+        re.compile(r"[Ii]n.network.{0,40}:\s*(\$[\d,]+).{0,400}out.of.pocket.{0,200}[Ii]ndividual/\$[\d,]+", re.DOTALL | re.IGNORECASE),
+        # OH: "$X/single,$Y/family" format
+        re.compile(r"out.of.pocket.{0,300}(\$[\d,]+)/single", re.DOTALL | re.IGNORECASE),
+        re.compile(r"(\$[\d,]+)/single.{0,400}out.of.pocket", re.DOTALL | re.IGNORECASE),
     ],
     "oop_max_family_inn": [
         re.compile(r"[Ii]n.network:\s*\$[\d,]+\s+[Ii]ndividual\s*/\s*(\$[\d,]+).{0,200}out.of.pocket", re.DOTALL | re.IGNORECASE),
@@ -168,6 +197,34 @@ FIELD_PATTERNS: dict[str, list[re.Pattern]] = {
         # "Network providers: $X [text] individual / $Y" family
         re.compile(r"[Nn]etwork providers:\s*\$[\d,]+.{0,600}individual\s*/\s*(\$[\d,]+)", re.DOTALL | re.IGNORECASE),
         re.compile(r"[Ii]n.network:\s*\$[\d,]+\s+[Ii]ndividual\s*/\s*(\$[\d,]+).{0,300}[Oo]ut.of.[Pp]ocket", re.DOTALL),
+        # Quartz: "Family: $X/individualor $Y/family" (normalized space-free text)
+        re.compile(r"Family:\s*\$[\d,]+/\w+\s+(\$[\d,]+)/family.{0,400}out.of.pocket", re.DOTALL),
+        re.compile(r"out.of.pocket.{0,400}Family:\s*\$[\d,]+/\w+\s+(\$[\d,]+)/family", re.DOTALL),
+        # NE: slash-separated family value
+        re.compile(r"out.of.pocket.{0,200}[Ii]n.network:\s*\$[\d,]+/\s*(\$[\d,]+)", re.DOTALL | re.IGNORECASE),
+        re.compile(r"[Ii]n.network:\s*\$[\d,]+/\s*(\$[\d,]+).{0,200}out.of.pocket", re.DOTALL | re.IGNORECASE),
+        # MI/UT/FL: "person / family" family value
+        re.compile(r"out.of.pocket.{0,400}\$[\d,]+\s+person\s*/\s*(\$[\d,]+)\s+family", re.DOTALL | re.IGNORECASE),
+        re.compile(r"\$[\d,]+\s+person\s*/\s*(\$[\d,]+)\s+family.{0,400}out.of.pocket", re.DOTALL | re.IGNORECASE),
+        # WI Network Health: "member / family" family value
+        re.compile(r"out.of.pocket.{0,400}\$[\d,]+\s+member\s*/\s*(\$[\d,]+)\s+family", re.DOTALL | re.IGNORECASE),
+        re.compile(r"\$[\d,]+\s+member\s*/\s*(\$[\d,]+)\s+family.{0,400}out.of.pocket", re.DOTALL | re.IGNORECASE),
+        # IL 36096: "Family: Participating $X"
+        re.compile(r"[Ff]amily:\s*Participating\s+(\$[\d,]+).{0,400}out.of.pocket", re.DOTALL | re.IGNORECASE),
+        re.compile(r"out.of.pocket.{0,400}[Ff]amily:\s*Participating\s+(\$[\d,]+)", re.DOTALL | re.IGNORECASE),
+        # MT: family value after "individual or $Y family" in network provider line
+        re.compile(r"[Nn]etwork\s+provider:\s*\$[\d,]+/.{0,200}individual\s+or\s+(\$[\d,]+)\s+family", re.DOTALL | re.IGNORECASE),
+        re.compile(r"out.of.pocket.{0,300}[Nn]etwork\s+provider:.{0,100}individual\s+or\s+(\$[\d,]+)\s+family", re.DOTALL | re.IGNORECASE),
+        # LA 19636: "For network providers $X individual / $Y family" (no colon)
+        re.compile(r"out.of.pocket.{0,400}[Ff]or\s+network\s+providers\s+\$[\d,]+.{0,200}individual\s*/\s*(\$[\d,]+)\s+family", re.DOTALL | re.IGNORECASE),
+        # WI/TX/LA: "$X/individual or $Y/family" family value
+        re.compile(r"out.of.pocket.{0,400}\$[\d,]+/[Ii]ndividual\s+or\s+(\$[\d,]+)/[Ff]amily", re.DOTALL | re.IGNORECASE),
+        re.compile(r"\$[\d,]+/[Ii]ndividual\s+or\s+(\$[\d,]+)/[Ff]amily.{0,400}out.of.pocket", re.DOTALL | re.IGNORECASE),
+        # WI 20173: "Individual/$Y Family" on the out-of-pocket question line
+        re.compile(r"out.of.pocket.{0,200}[Ii]ndividual/(\$[\d,]+)\s+[Ff]amily", re.DOTALL | re.IGNORECASE),
+        # OH: "$X/single,$Y/family"
+        re.compile(r"out.of.pocket.{0,300}\$[\d,]+/single[,\s]+(\$[\d,]+)/family", re.DOTALL | re.IGNORECASE),
+        re.compile(r"\$[\d,]+/single[,\s]+(\$[\d,]+)/family.{0,400}out.of.pocket", re.DOTALL | re.IGNORECASE),
     ],
     # Copays: DOTALL with limited window so amount can be on a following line.
     # Generic drug also handles table-linearized format where copay appears before service name.
