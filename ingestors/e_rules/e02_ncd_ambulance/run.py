@@ -1,173 +1,125 @@
 """NCD 10.1 — Ambulance Services ingestor (Family E, E.2).
 
-Source: CMS Medicare Coverage Database (NCD 10.1)
-  Landing page / canonical_url: https://www.cms.gov/medicare-coverage-database/view/ncd.aspx?NCDId=34
+Source: CMS Medicare Coverage Database — NCD 10.1 (Ambulance Services)
+  https://www.cms.gov/medicare-coverage-database/view/ncd.aspx?NCDId=34
 
-Fetches the NCD 10.1 HTML page and extracts criteria as draft rows (reviewed=0).
-All rows must be human-reviewed before the application serves them — the app
-queries WHERE reviewed=1 only.
+Records are hand-authored from the CMS NCD 10.1 source page. The CMS MCD site
+requires JavaScript and cannot be fetched programmatically.
 
-Human review gate (after running this ingestor):
-  1. Inspect: SELECT * FROM ncd_ambulance WHERE reviewed=0;
-  2. Verify criteria_text against https://www.cms.gov/medicare-coverage-database/view/ncd.aspx?NCDId=34
-  3. Approve: UPDATE ncd_ambulance SET reviewed=1 WHERE ncd_id='10.1' AND section_id=<id>;
-  4. Ensure all 7 criterion types are covered (see addendum §E.2 key criteria table).
+Fixture: data/raw/e02_ncd_ambulance/records.json
+
+All rows are written with reviewed=0. A human reviewer must verify each row's
+criteria_text against the CMS source and then set reviewed=1. The application
+serves only reviewed=1 rows.
+
+Human review gate:
+  1. Open https://www.cms.gov/medicare-coverage-database/view/ncd.aspx?NCDId=34
+  2. Verify each criteria_text field in the fixture against the live CMS text
+  3. Run this ingestor to load the rows
+  4. For each verified row:
+       UPDATE ncd_ambulance SET reviewed=1 WHERE ncd_id='10.1' AND section_id=<id>;
 """
-import html as html_mod
-import re
-import sqlite3
+import json
 from pathlib import Path
 
-from ingestors.core.pipeline import run_ingestor
+from ingestors.core.db import get_conn
+from ingestors.core.pipeline import record_release, record_error
 
 SOURCE_ID = "e02_ncd_ambulance"
-NCD_ID = "10.1"
-EFFECTIVE_DATE = "2002-10-04"  # NCD 10.1 original effective date
+FIXTURE_PATH = Path(__file__).resolve().parents[3] / "data" / "raw" / SOURCE_ID / "records.json"
+SOURCE_URL = "https://www.cms.gov/medicare-coverage-database/view/ncd.aspx?NCDId=34"
+EXPECTED_MIN_ROWS = 7
 
-_CRITERION_KEYWORDS: dict[str, list[str]] = {
-    "medical_necessity": [
-        "medical necessity", "medically necessary", "preclud", "endanger",
-        "immediate ambulance", "required immediate",
-    ],
-    "facility_standard": [
-        "nearest appropriate", "nearest facility", "appropriate facility",
-        "capable of providing",
-    ],
-    "transport_condition": [
-        "loaded mileage", "unloaded mileage", "a0425",
-        "als1", "als2", "als emergency", "bls",
-        "advanced life support", "basic life support",
-        "origin", "destination", "modifier",
-    ],
-    "exclusion": [
-        "not covered", "non-covered", "excluded", "coverage is not",
-        "does not cover", "will not be covered",
-    ],
-    "definition": ["defined as", "means ", "refers to", "is defined"],
+_VALID_CRITERION_TYPES = {
+    "medical_necessity", "transport_condition", "facility_standard", "exclusion", "definition"
+}
+_REQUIRED_CRITERION_TYPES = {
+    "medical_necessity", "transport_condition", "facility_standard", "exclusion"
 }
 
-
-def _infer_criterion_type(text: str) -> str | None:
-    t = text.lower()
-    for ctype, keywords in _CRITERION_KEYWORDS.items():
-        if any(kw in t for kw in keywords):
-            return ctype
-    return None
-
-
-def _infer_coverage_indicator(text: str) -> str:
-    t = text.lower()
-    if any(w in t for w in ["not covered", "non-covered", "excluded", "does not cover"]):
-        return "non_covered"
-    if any(w in t for w in ["covered when", "covered if", "may be covered", "payable if"]):
-        return "conditional"
-    if any(w in t for w in ["is covered", "are covered", "coverage is provided", "will be covered"]):
-        return "covered"
-    return "informational"
-
-
-def _clean_html(html: str) -> str:
-    """Strip scripts, styles, tags; decode entities; collapse whitespace."""
-    html = re.sub(r"<script[^>]*>.*?</script>", " ", html, flags=re.DOTALL | re.IGNORECASE)
-    html = re.sub(r"<style[^>]*>.*?</style>", " ", html, flags=re.DOTALL | re.IGNORECASE)
-    html = re.sub(r"<[^>]+>", " ", html)
-    html = html_mod.unescape(html)
-    return re.sub(r"\s+", " ", html).strip()
-
-
-def _parse_ncd_html(html: str, source_url: str) -> list[dict]:
-    """
-    Extract NCD 10.1 section text from the CMS HTML page.
-
-    CMS NCD pages number sections as "10.1", "10.1.1", "10.1.2", etc.
-    We find each section heading and capture the following text as its body.
-    """
-    text = _clean_html(html)
-
-    # Match section numbers like 10.1, 10.1.1, 10.1.2 followed by a title
-    sec_re = re.compile(r"\b(10\.1(?:\.\d+)*)\b\s*[-–—.]?\s*([A-Z][^.]{4,120}\.?)")
-    matches = list(sec_re.finditer(text))
-
-    rows: list[dict] = []
-
-    if not matches:
-        print(f"[{SOURCE_ID}] WARNING: no section headers found in HTML — storing full text as single draft row")
-        body = text[:5000]
-        rows.append({
-            "ncd_id": NCD_ID,
-            "section_id": "10.1.0",
-            "section_title": "NCD 10.1 Ambulance Services (full text — parser needs update)",
-            "coverage_indicator": "informational",
-            "criteria_text": body,
-            "criterion_type": None,
-            "effective_date": EFFECTIVE_DATE,
-            "citation": f"CMS NCD 10.1 — {source_url}",
-        })
-        return rows
-
-    for idx, m in enumerate(matches):
-        section_id = m.group(1)
-        title = m.group(2).strip().rstrip(".")
-        body_start = m.end()
-        body_end = matches[idx + 1].start() if idx + 1 < len(matches) else body_start + 3000
-        body = text[body_start:body_end].strip()
-
-        if len(body) < 20:
-            continue
-
-        rows.append({
-            "ncd_id": NCD_ID,
-            "section_id": section_id,
-            "section_title": title,
-            "coverage_indicator": _infer_coverage_indicator(body),
-            "criteria_text": body[:5000],
-            "criterion_type": _infer_criterion_type(body),
-            "effective_date": EFFECTIVE_DATE,
-            "citation": f"CMS NCD {section_id} — {source_url}",
-        })
-
-    return rows
-
-
-def ingest(source: dict, local_path: Path, file_hash: str, conn: sqlite3.Connection) -> int:
-    source_url = source["canonical_url"]
-    html = local_path.read_text(encoding="utf-8", errors="replace")
-    rows = _parse_ncd_html(html, source_url)
-
-    if not rows:
-        raise ValueError("0 rows extracted from NCD HTML — check raw file and update _parse_ncd_html()")
-
-    found_types = {r["criterion_type"] for r in rows if r["criterion_type"]}
-    required_types = {"medical_necessity", "facility_standard", "transport_condition", "exclusion"}
-    missing = required_types - found_types
-    if missing:
-        print(f"[{SOURCE_ID}] WARNING: criterion types not auto-detected: {missing}")
-        print(f"[{SOURCE_ID}]   Assign these manually during human review (UPDATE criterion_type)")
-
-    db_rows = [
-        (r["ncd_id"], r["section_id"], r["section_title"], r["coverage_indicator"],
-         r["criteria_text"], r["criterion_type"], r["effective_date"], r["citation"],
-         0,  # reviewed=0 — human review gate, never set programmatically
-         SOURCE_ID)
-        for r in rows
-    ]
-
-    conn.executemany(
-        """INSERT OR REPLACE INTO ncd_ambulance
-           (ncd_id, section_id, section_title, coverage_indicator, criteria_text,
-            criterion_type, effective_date, citation, reviewed, source_id)
-           VALUES (?,?,?,?,?,?,?,?,?,?)""",
-        db_rows,
-    )
-    conn.commit()
-
-    print(f"[{SOURCE_ID}] {len(db_rows)} draft rows written (reviewed=0)")
-    print(f"[{SOURCE_ID}] NEXT: review against {source_url} then SET reviewed=1")
-    return len(db_rows)
+_INSERT_SQL = """INSERT OR REPLACE INTO ncd_ambulance
+   (ncd_id, section_id, section_title, coverage_indicator, criteria_text,
+    criterion_type, effective_date, citation, reviewed, source_id)
+   VALUES (?,?,?,?,?,?,?,?,?,?)"""
 
 
 def main():
-    run_ingestor(SOURCE_ID, ingest)
+    if not FIXTURE_PATH.exists():
+        print(f"[{SOURCE_ID}] FIXTURE REQUIRED: place records.json at {FIXTURE_PATH}")
+        print(f"  Author criteria_text from: {SOURCE_URL}")
+        print("  See data_completion_addendum_v2.md §E.2 key criteria table for required rows.")
+        return
+
+    conn = get_conn()
+    release_id = None
+
+    try:
+        records = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+        if not isinstance(records, list):
+            raise ValueError("records.json must be a JSON array")
+
+        if len(records) < EXPECTED_MIN_ROWS:
+            raise ValueError(f"Expected >= {EXPECTED_MIN_ROWS} rows, got {len(records)}")
+
+        for r in records:
+            text = (r.get("criteria_text") or "").strip()
+            if not text or len(text) < 20:
+                raise ValueError(
+                    f"criteria_text too short on section_id={r.get('section_id')} — "
+                    f"fill in the actual NCD text from {SOURCE_URL}"
+                )
+            if text.upper().startswith("STUB"):
+                raise ValueError(
+                    f"criteria_text is still a stub on section_id={r.get('section_id')} — "
+                    f"replace with verbatim text from {SOURCE_URL} before loading"
+                )
+            if not r.get("citation"):
+                raise ValueError(f"citation missing on section_id={r.get('section_id')}")
+            ct = r.get("criterion_type")
+            if ct and ct not in _VALID_CRITERION_TYPES:
+                raise ValueError(f"Unknown criterion_type '{ct}' on section_id={r.get('section_id')}")
+
+        found_types = {r.get("criterion_type") for r in records if r.get("criterion_type")}
+        missing_types = _REQUIRED_CRITERION_TYPES - found_types
+        if missing_types:
+            raise ValueError(
+                f"Missing required criterion_type(s): {missing_types}. "
+                f"Add rows covering these types before loading."
+            )
+
+        db_rows = [
+            (
+                r["ncd_id"],
+                r["section_id"],
+                r["section_title"],
+                r.get("coverage_indicator", "informational"),
+                r["criteria_text"].strip(),
+                r.get("criterion_type"),
+                r["effective_date"],
+                r["citation"],
+                0,  # reviewed=0 always — never set programmatically
+                SOURCE_ID,
+            )
+            for r in records
+        ]
+
+        conn.executemany(_INSERT_SQL, db_rows)
+        conn.commit()
+
+        reviewed_count = conn.execute(
+            "SELECT COUNT(*) FROM ncd_ambulance WHERE ncd_id='10.1' AND reviewed=1"
+        ).fetchone()[0]
+
+        release_id = record_release(conn, SOURCE_ID, SOURCE_URL, "manual", len(db_rows))
+        print(f"[{SOURCE_ID}] done — {len(db_rows)} rows loaded (reviewed=0) (release #{release_id})")
+        print(f"[{SOURCE_ID}] {reviewed_count} row(s) currently have reviewed=1")
+        if reviewed_count < 6:
+            print(f"[{SOURCE_ID}] NEXT: verify criteria_text against {SOURCE_URL}")
+            print(f"[{SOURCE_ID}]   then: UPDATE ncd_ambulance SET reviewed=1 WHERE ncd_id='10.1' AND section_id=<id>")
+
+    except Exception as e:
+        record_error(conn, SOURCE_ID, release_id, "parse_error", str(e))
+        raise
 
 
 if __name__ == "__main__":

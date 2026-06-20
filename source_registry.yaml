@@ -288,17 +288,17 @@ sources:
   - source_id: e02_ncd_ambulance
     publisher: CMS
     canonical_url: "https://www.cms.gov/medicare-coverage-database/view/ncd.aspx?NCDId=34"
-    # NCD 10.1 — Ambulance Services. Defines medical necessity criteria for Medicare
-    # ambulance coverage. Stable policy; quarterly health-check sufficient.
+    # NCD 10.1 — Ambulance Services. Hand-authored fixture — CMS MCD requires JavaScript
+    # and cannot be fetched programmatically. criteria_text authored from the source page.
     # All rows written with reviewed=0 — human review gate before app serves them.
-    # API alternative: https://api.cms.gov/medicare-coverage-database/v2/ncd/34
-    format: html
-    extraction_method: web_scrape
+    # Manual file: data/raw/e02_ncd_ambulance/records.json
+    format: json
+    extraction_method: manual_import
     refresh_cadence: quarterly_health_check
     phi_status: non-phi
     license: public_domain
-    robots_txt_status: allowed
-    user_agent: MASA-AdvocacyIngestor/0.1-pilot
+    robots_txt_status: n_a
+    user_agent: n_a
 
   - source_id: e03_medicare_appeals
     publisher: CMS / eCFR

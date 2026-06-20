@@ -1,0 +1,72 @@
+[
+  {
+    "ncd_id": "10.1",
+    "section_id": "10.1.1",
+    "section_title": "Emergency Ambulance Transportation — Medical Necessity",
+    "coverage_indicator": "conditional",
+    "criteria_text": "STUB — replace with verbatim text from CMS NCD 10.1 covering emergency medical necessity: the patient's condition was such that use of any other method of transportation was contraindicated, and transportation was required to obtain medically necessary services. Source: https://www.cms.gov/medicare-coverage-database/view/ncd.aspx?NCDId=34",
+    "criterion_type": "medical_necessity",
+    "effective_date": "2002-10-04",
+    "citation": "CMS NCD 10.1, Section 10.1 — Emergency Ambulance Transportation"
+  },
+  {
+    "ncd_id": "10.1",
+    "section_id": "10.1.2",
+    "section_title": "Non-Emergency Ambulance Transportation — Medical Necessity",
+    "coverage_indicator": "conditional",
+    "criteria_text": "STUB — replace with verbatim text from CMS NCD 10.1 covering non-emergency medical necessity: the patient's condition is such that other methods of transportation are contraindicated, and the patient is being transported to receive a Medicare covered service or returning from such a service. Source: https://www.cms.gov/medicare-coverage-database/view/ncd.aspx?NCDId=34",
+    "criterion_type": "medical_necessity",
+    "effective_date": "2002-10-04",
+    "citation": "CMS NCD 10.1, Section 10.1 — Non-Emergency Ambulance Transportation"
+  },
+  {
+    "ncd_id": "10.1",
+    "section_id": "10.1.3",
+    "section_title": "Nearest Appropriate Facility Standard",
+    "coverage_indicator": "conditional",
+    "criteria_text": "STUB — replace with verbatim text from CMS NCD 10.1 covering the nearest appropriate facility requirement: transportation to the nearest appropriate facility that is capable of providing the required level of care. Source: https://www.cms.gov/medicare-coverage-database/view/ncd.aspx?NCDId=34",
+    "criterion_type": "facility_standard",
+    "effective_date": "2002-10-04",
+    "citation": "CMS NCD 10.1 — Nearest Appropriate Facility"
+  },
+  {
+    "ncd_id": "10.1",
+    "section_id": "10.1.4",
+    "section_title": "Loaded vs. Unloaded Mileage — A0425",
+    "coverage_indicator": "conditional",
+    "criteria_text": "STUB — replace with verbatim text from CMS NCD 10.1 covering mileage coverage criteria for A0425 (ground mileage): loaded mileage is covered; unloaded mileage (travel to pick up the patient) is generally not covered except in specific circumstances. Source: https://www.cms.gov/medicare-coverage-database/view/ncd.aspx?NCDId=34",
+    "criterion_type": "transport_condition",
+    "effective_date": "2002-10-04",
+    "citation": "CMS NCD 10.1 — Mileage Coverage (A0425)"
+  },
+  {
+    "ncd_id": "10.1",
+    "section_id": "10.1.5",
+    "section_title": "BLS vs. ALS Level — Service Level Criteria",
+    "coverage_indicator": "conditional",
+    "criteria_text": "STUB — replace with verbatim text from CMS NCD 10.1 covering BLS (Basic Life Support) vs. ALS (Advanced Life Support) level determination: ALS1, ALS2, and ALS Emergency service levels require the patient's condition to meet the applicable medical necessity criteria for the level billed. Source: https://www.cms.gov/medicare-coverage-database/view/ncd.aspx?NCDId=34",
+    "criterion_type": "transport_condition",
+    "effective_date": "2002-10-04",
+    "citation": "CMS NCD 10.1 — BLS/ALS Level Criteria"
+  },
+  {
+    "ncd_id": "10.1",
+    "section_id": "10.1.6",
+    "section_title": "Origin and Destination Modifiers",
+    "coverage_indicator": "conditional",
+    "criteria_text": "STUB — replace with verbatim text from CMS NCD 10.1 covering origin/destination modifier requirements: HCPCS modifiers D, E, G, H, I, J, N, P, R, S, and X are appended to ambulance codes to indicate the point of pick-up and destination; only specific origin-destination combinations are covered under Medicare. Source: https://www.cms.gov/medicare-coverage-database/view/ncd.aspx?NCDId=34",
+    "criterion_type": "transport_condition",
+    "effective_date": "2002-10-04",
+    "citation": "CMS NCD 10.1 — Origin/Destination Modifiers"
+  },
+  {
+    "ncd_id": "10.1",
+    "section_id": "10.1.7",
+    "section_title": "Non-Covered Transport Scenarios",
+    "coverage_indicator": "non_covered",
+    "criteria_text": "STUB — replace with verbatim text from CMS NCD 10.1 covering non-covered scenarios: ambulance transportation is not covered when other means of transportation could have been used without endangering the patient's health, or when the destination is not an appropriate Medicare-covered facility. Source: https://www.cms.gov/medicare-coverage-database/view/ncd.aspx?NCDId=34",
+    "criterion_type": "exclusion",
+    "effective_date": "2002-10-04",
+    "citation": "CMS NCD 10.1 — Non-Covered Transport"
+  }
+]
