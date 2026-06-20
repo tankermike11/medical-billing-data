@@ -41,6 +41,7 @@ FIELD_PATTERNS: dict[str, list[re.Pattern]] = {
     # Format 2 (AZ BCBS): "$X/individual and $Y/family" after "deductible?" label
     # Format 3 (AL Blue): "$X / individual or $Y / family"
     # Format 4 (AL Blue Self-Only): "$X / Self-Only or $Y / Family"
+    # Format 5+ (FL Blue, Quartz, WI/TX, MI, MT, IL): see below
     "deductible_individual_inn": [
         re.compile(r"[Dd]eductible.{0,100}[Ii]n.network:\s*(\$[\d,]+)\s+[Ii]ndividual", re.DOTALL),
         # AZ BCBS: value after "deductible" keyword (no "?" anchor — ? appears after value in linearized tables)
@@ -50,6 +51,25 @@ FIELD_PATTERNS: dict[str, list[re.Pattern]] = {
         # AL Blue Self-Only variant
         re.compile(r"(\$[\d,]+)\s*/\s*[Ss]elf.Only\s+or\s+\$[\d,]+\s*/", re.IGNORECASE),
         re.compile(r"[Dd]eductible.{0,200}(\$[\d,]+)\s+[Ii]ndividual", re.DOTALL),
+        # FL Blue: "In-Network: $X Per Person/$Y" — value embedded in question row
+        re.compile(r"[Ii]n.network:\s*(\$[\d,]+)\s+Per\s+Person/\$[\d,]+.{0,400}deductible", re.DOTALL | re.IGNORECASE),
+        re.compile(r"deductible.{0,400}[Ii]n.network:\s*(\$[\d,]+)\s+Per\s+Person", re.DOTALL | re.IGNORECASE),
+        # WI/TX/NH: "$X/person or $Y/family for In-Network"
+        re.compile(r"(\$[\d,]+)/[Pp]erson\s+or\s+\$[\d,]+/[Ff]amily.{0,400}deductible", re.DOTALL | re.IGNORECASE),
+        re.compile(r"deductible.{0,400}(\$[\d,]+)/[Pp]erson\s+or\s+\$[\d,]+/[Ff]amily", re.DOTALL | re.IGNORECASE),
+        # MI/FL: "$X person / $Y family" or "$X person/ $Y family"
+        re.compile(r"(\$[\d,]+)\s+person\s*/\s*\$[\d,]+\s+family.{0,400}deductible", re.DOTALL | re.IGNORECASE),
+        re.compile(r"deductible.{0,400}(\$[\d,]+)\s+person\s*/\s*\$[\d,]+\s+family", re.DOTALL | re.IGNORECASE),
+        # MT: "Network provider: $X/ individual or $Y/ family"
+        re.compile(r"[Nn]etwork\s+provider:\s*(\$[\d,]+)/\s*.{0,30}individual\s+or", re.DOTALL | re.IGNORECASE),
+        # IL 36096: "Individual: Participating $X; Non-Participating $Y"
+        re.compile(r"[Ii]ndividual:\s*Participating\s+(\$[\d,]+)", re.DOTALL | re.IGNORECASE),
+        # Quartz (space-free PDF text, normalized to "Individual: $X"): value before "deductible"
+        re.compile(r"Individual:\s*(\$[\d,]+).{0,400}deductible", re.DOTALL),
+        re.compile(r"deductible.{0,400}Individual:\s*(\$[\d,]+)", re.DOTALL),
+        # NE: "In-Network:$X/$Y" slash-separated individual/family near deductible
+        re.compile(r"deductible.{0,400}[Ii]n.network:\s*(\$[\d,]+)/\s*\$[\d,]+", re.DOTALL | re.IGNORECASE),
+        re.compile(r"[Ii]n.network:\s*(\$[\d,]+)/\s*\$[\d,]+.{0,400}deductible", re.DOTALL | re.IGNORECASE),
     ],
     "deductible_family_inn": [
         re.compile(r"[Dd]eductible.{0,100}[Ii]n.network:\s*\$[\d,]+\s+[Ii]ndividual\s*/\s*(\$[\d,]+)", re.DOTALL),
@@ -57,6 +77,25 @@ FIELD_PATTERNS: dict[str, list[re.Pattern]] = {
         re.compile(r"\$[\d,]+\s*/\s*[Ii]ndividual\s+or\s+(\$[\d,]+)\s*/\s*[Ff]amily", re.IGNORECASE),
         re.compile(r"\$[\d,]+\s*/\s*[Ss]elf.Only\s+or\s+(\$[\d,]+)\s*/\s*[Ff]amily", re.IGNORECASE),
         re.compile(r"[Dd]eductible.{0,200}[Ii]ndividual\s*/\s*(\$[\d,]+)", re.DOTALL),
+        # FL Blue: Per Person/$Y family value
+        re.compile(r"[Ii]n.network:\s*\$[\d,]+\s+Per\s+Person/(\$[\d,]+).{0,400}deductible", re.DOTALL | re.IGNORECASE),
+        re.compile(r"deductible.{0,400}[Ii]n.network:\s*\$[\d,]+\s+Per\s+Person/(\$[\d,]+)", re.DOTALL | re.IGNORECASE),
+        # WI/TX/NH: "$X/person or $Y/family"
+        re.compile(r"\$[\d,]+/[Pp]erson\s+or\s+(\$[\d,]+)/[Ff]amily.{0,400}deductible", re.DOTALL | re.IGNORECASE),
+        re.compile(r"deductible.{0,400}\$[\d,]+/[Pp]erson\s+or\s+(\$[\d,]+)/[Ff]amily", re.DOTALL | re.IGNORECASE),
+        # MI/FL: "$X person / $Y family"
+        re.compile(r"\$[\d,]+\s+person\s*/\s*(\$[\d,]+)\s+family.{0,400}deductible", re.DOTALL | re.IGNORECASE),
+        re.compile(r"deductible.{0,400}\$[\d,]+\s+person\s*/\s*(\$[\d,]+)\s+family", re.DOTALL | re.IGNORECASE),
+        # MT: family value follows "individual or $Y/ family"
+        re.compile(r"[Nn]etwork\s+provider:\s*\$[\d,]+/.{0,30}individual\s+or\s+(\$[\d,]+)/\s*family", re.DOTALL | re.IGNORECASE),
+        # IL 36096: "Family: Participating $X"
+        re.compile(r"[Ff]amily:\s*Participating\s+(\$[\d,]+)", re.DOTALL | re.IGNORECASE),
+        # Quartz: "Family: $X/individualor $Y/family" (normalized text)
+        re.compile(r"Family:\s*\$[\d,]+/\w+\s+(\$[\d,]+)/family.{0,400}deductible", re.DOTALL),
+        re.compile(r"deductible.{0,400}Family:\s*\$[\d,]+/\w+\s+(\$[\d,]+)/family", re.DOTALL),
+        # NE: slash-separated family value
+        re.compile(r"deductible.{0,400}[Ii]n.network:\s*\$[\d,]+/\s*(\$[\d,]+)", re.DOTALL | re.IGNORECASE),
+        re.compile(r"[Ii]n.network:\s*\$[\d,]+/\s*(\$[\d,]+).{0,400}deductible", re.DOTALL | re.IGNORECASE),
     ],
     # OOP max individual in-network.
     # Format 1 (most common): "In-network: $X Individual ... out-of-pocket" (value before question)
