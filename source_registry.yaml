@@ -284,3 +284,88 @@ sources:
     license: internal_counsel_reviewed
     robots_txt_status: n_a
     user_agent: n_a
+
+  - source_id: e02_ncd_ambulance
+    publisher: CMS
+    canonical_url: "https://www.cms.gov/medicare-coverage-database/view/ncd.aspx?NCDId=34"
+    # NCD 10.1 — Ambulance Services. Defines medical necessity criteria for Medicare
+    # ambulance coverage. Stable policy; quarterly health-check sufficient.
+    # All rows written with reviewed=0 — human review gate before app serves them.
+    # API alternative: https://api.cms.gov/medicare-coverage-database/v2/ncd/34
+    format: html
+    extraction_method: web_scrape
+    refresh_cadence: quarterly_health_check
+    phi_status: non-phi
+    license: public_domain
+    robots_txt_status: allowed
+    user_agent: MASA-AdvocacyIngestor/0.1-pilot
+
+  - source_id: e03_medicare_appeals
+    publisher: CMS / eCFR
+    canonical_url: "https://www.ecfr.gov/current/title-42/chapter-IV/subchapter-B/part-405"
+    # Hand-authored fixture. Records from 42 CFR §405.900–1140, 42 CFR §423.1966,
+    # and CMS Pub. 100-04 Ch. 29. No automated download.
+    # Place fixture at: data/raw/e03_medicare_appeals/records.json
+    format: json
+    extraction_method: manual_import
+    refresh_cadence: annual
+    phi_status: non-phi
+    license: public_domain
+    robots_txt_status: n_a
+    user_agent: n_a
+
+  - source_id: e04_aca_appeals
+    publisher: DOL / EBSA / eCFR
+    canonical_url: "https://www.ecfr.gov/current/title-45/subtitle-A/subchapter-B/part-147"
+    # Hand-authored fixture. Records from 45 CFR §147.136, 29 CFR §2560.503-1,
+    # and DOL/EBSA guidance. No automated download.
+    # Place fixture at: data/raw/e04_aca_appeals/records.json
+    format: json
+    extraction_method: manual_import
+    refresh_cadence: annual
+    phi_status: non-phi
+    license: public_domain
+    robots_txt_status: n_a
+    user_agent: n_a
+
+  - source_id: c04_ma_landscape
+    publisher: CMS
+    canonical_url: "https://www.cms.gov/files/zip/2025-landscape-source-file.zip"
+    # VERIFY: CMS Medicare Advantage Landscape ZIP for PY2025. URL changes annually.
+    # Landing page: cms.gov/medicare/health-drug-plans/medicareadvantage/enrollment/plan-information
+    # Re-run in October each year to pick up the upcoming plan year release.
+    format: zip
+    extraction_method: bulk_file
+    refresh_cadence: annual
+    phi_status: non-phi
+    license: public_domain
+    robots_txt_status: allowed
+    user_agent: MASA-AdvocacyIngestor/0.1-pilot
+
+  - source_id: c06_ncci_ptp
+    publisher: CMS
+    canonical_url: "https://www.cms.gov/files/zip/ncci-ptp-quarterly-update-april-2026.zip"
+    # VERIFY: CMS NCCI PTP quarterly ZIP for 2026Q2 (April 2026 update).
+    # Update URL each quarter (January, April, July, October).
+    # Landing page: cms.gov/medicare/coding-billing/national-correct-coding-initiative-ncci-edits
+    # Contains physician PTP and outpatient/ASC PTP edit tables.
+    format: zip
+    extraction_method: bulk_file
+    refresh_cadence: quarterly
+    phi_status: non-phi
+    license: public_domain
+    robots_txt_status: allowed
+    user_agent: MASA-AdvocacyIngestor/0.1-pilot
+
+  - source_id: c06_ncci_mue
+    publisher: CMS
+    canonical_url: "https://www.cms.gov/files/zip/ncci-ptp-quarterly-update-april-2026.zip"
+    # Same ZIP as c06_ncci_ptp — MUE table is bundled in the same quarterly release.
+    # Keep this URL in sync with c06_ncci_ptp.
+    format: zip
+    extraction_method: bulk_file
+    refresh_cadence: quarterly
+    phi_status: non-phi
+    license: public_domain
+    robots_txt_status: allowed
+    user_agent: MASA-AdvocacyIngestor/0.1-pilot

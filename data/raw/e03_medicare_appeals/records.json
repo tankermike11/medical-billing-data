@@ -1,0 +1,80 @@
+[
+  {
+    "level_id": "medicare_L1",
+    "level_number": 1,
+    "level_name": "Redetermination",
+    "decision_maker": "Medicare Administrative Contractor (MAC)",
+    "filing_deadline_days": 120,
+    "filing_deadline_basis": "Date of initial determination (notice of non-coverage or MSN)",
+    "min_amount_in_controversy": null,
+    "submission_address_notes": "Submit to the MAC that processed the original claim. Address printed on the Medicare Summary Notice (MSN) or Explanation of Medicare Benefits (EOMB).",
+    "citation": "42 CFR §405.940–§405.958; CMS Pub. 100-04, Ch. 29, §§30–30.8",
+    "plan_type": "traditional_medicare",
+    "deadline_reviewed_by": null
+  },
+  {
+    "level_id": "medicare_L2",
+    "level_number": 2,
+    "level_name": "Reconsideration by Qualified Independent Contractor (QIC)",
+    "decision_maker": "Qualified Independent Contractor (QIC)",
+    "filing_deadline_days": 180,
+    "filing_deadline_basis": "Date of MAC redetermination notice",
+    "min_amount_in_controversy": null,
+    "submission_address_notes": "Submit to the QIC identified in the MAC's redetermination notice. QIC assignment varies by jurisdiction.",
+    "citation": "42 CFR §405.960–§405.978; CMS Pub. 100-04, Ch. 29, §§40–40.8",
+    "plan_type": "traditional_medicare",
+    "deadline_reviewed_by": null
+  },
+  {
+    "level_id": "medicare_L3",
+    "level_number": 3,
+    "level_name": "ALJ Hearing",
+    "decision_maker": "Office of Medicare Hearings and Appeals (OMHA) Administrative Law Judge",
+    "filing_deadline_days": 60,
+    "filing_deadline_basis": "Date of QIC reconsideration decision",
+    "min_amount_in_controversy": null,
+    "submission_address_notes": "Amount in controversy (AIC) threshold applies — CMS publishes updated dollar amount annually. Verify current threshold before advising member. File with OMHA.",
+    "citation": "42 CFR §405.1000–§405.1064; 42 CFR §423.1966; CMS Pub. 100-04, Ch. 29, §§60–60.6",
+    "plan_type": "traditional_medicare",
+    "deadline_reviewed_by": null
+  },
+  {
+    "level_id": "medicare_L4",
+    "level_number": 4,
+    "level_name": "Medicare Appeals Council Review",
+    "decision_maker": "Departmental Appeals Board (DAB) Medicare Appeals Council",
+    "filing_deadline_days": 60,
+    "filing_deadline_basis": "Date of ALJ decision",
+    "min_amount_in_controversy": null,
+    "submission_address_notes": "File with the Medicare Appeals Council at the Departmental Appeals Board (DAB). No additional AIC threshold beyond L3.",
+    "citation": "42 CFR §405.1100–§405.1130; CMS Pub. 100-04, Ch. 29, §§70–70.8",
+    "plan_type": "traditional_medicare",
+    "deadline_reviewed_by": null
+  },
+  {
+    "level_id": "medicare_L5",
+    "level_number": 5,
+    "level_name": "Federal District Court Review",
+    "decision_maker": "U.S. Federal District Court",
+    "filing_deadline_days": 60,
+    "filing_deadline_basis": "Date of Medicare Appeals Council decision",
+    "min_amount_in_controversy": null,
+    "submission_address_notes": "File in the U.S. District Court for the district where the enrollee resides or does business. AIC threshold applies (CMS-annual) — verify current amount before advising member.",
+    "citation": "42 CFR §405.1136; 42 U.S.C. §1395ff(b)(1)(A); CMS Pub. 100-04, Ch. 29, §§80–80.2",
+    "plan_type": "traditional_medicare",
+    "deadline_reviewed_by": null
+  },
+  {
+    "level_id": "medicare_MA",
+    "level_number": 5,
+    "level_name": "MA Equivalent Process",
+    "decision_maker": "Medicare Advantage plan (organization determination and internal appeal process)",
+    "filing_deadline_days": null,
+    "filing_deadline_basis": "Plan-specific — refer to plan EOB and Evidence of Coverage (EOC)",
+    "min_amount_in_controversy": null,
+    "submission_address_notes": "Submit to the MA plan that issued the adverse organization determination. Contact information and deadlines are in the plan's Evidence of Coverage (EOC). MA plans must offer an equivalent 5-level process but routing is plan-specific.",
+    "citation": "42 CFR §422.562–§422.622; CMS Medicare Managed Care Manual, Ch. 13",
+    "plan_type": "medicare_advantage",
+    "deadline_reviewed_by": null
+  }
+]

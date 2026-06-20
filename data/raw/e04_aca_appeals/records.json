@@ -1,0 +1,58 @@
+[
+  {
+    "level_id": "aca_L1",
+    "level_number": 1,
+    "level_name": "Internal Appeal",
+    "applicable_plan_types": ["fully_insured"],
+    "filing_deadline_days": 180,
+    "filing_deadline_basis": "Date of adverse benefit determination (denial) notice",
+    "decision_deadline_days": 60,
+    "decision_deadline_basis": "Receipt of internal appeal (post-service claims); 30 days for pre-service/concurrent claims",
+    "iro_applicable": 0,
+    "erisa_preemption_note": null,
+    "citation": "45 CFR §147.136(b)(2); 29 CFR §2590.715-2719(b)(2)",
+    "deadline_reviewed_by": null
+  },
+  {
+    "level_id": "aca_L2",
+    "level_number": 2,
+    "level_name": "External Independent Review",
+    "applicable_plan_types": ["fully_insured"],
+    "filing_deadline_days": null,
+    "filing_deadline_basis": "Varies by state and plan — check plan documents and applicable state external review law",
+    "decision_deadline_days": null,
+    "decision_deadline_basis": "Varies by state",
+    "iro_applicable": 1,
+    "erisa_preemption_note": null,
+    "citation": "45 CFR §147.136(d); NAIC Uniform Health Carrier External Review Model Act (as adopted by applicable state)",
+    "deadline_reviewed_by": null
+  },
+  {
+    "level_id": "erisa_L1",
+    "level_number": 1,
+    "level_name": "Internal Appeal",
+    "applicable_plan_types": ["self_funded_erisa"],
+    "filing_deadline_days": 180,
+    "filing_deadline_basis": "Date of adverse benefit determination (denial) notice",
+    "decision_deadline_days": 60,
+    "decision_deadline_basis": "Receipt of internal appeal (post-service claims); 30 days for pre-service/concurrent claims",
+    "iro_applicable": 0,
+    "erisa_preemption_note": null,
+    "citation": "29 CFR §2560.503-1(h)(3); ERISA §503; 29 CFR §2590.715-2719(b)(2)",
+    "deadline_reviewed_by": null
+  },
+  {
+    "level_id": "erisa_L2",
+    "level_number": 2,
+    "level_name": "Voluntary External Review",
+    "applicable_plan_types": ["self_funded_erisa"],
+    "filing_deadline_days": null,
+    "filing_deadline_basis": "Plan-specific — consult the plan's Summary Plan Description (SPD)",
+    "decision_deadline_days": null,
+    "decision_deadline_basis": "Plan-specific",
+    "iro_applicable": 1,
+    "erisa_preemption_note": "State external review laws are generally preempted for self-funded ERISA plans. External review at this level is voluntary and plan-specific. Verify with your plan documents.",
+    "citation": "ERISA §514; 29 CFR §2590.715-2719(d); DOL Technical Release 2010-01",
+    "deadline_reviewed_by": null
+  }
+]

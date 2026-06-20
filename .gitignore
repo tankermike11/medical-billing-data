@@ -1,5 +1,10 @@
 data/db/
 data/raw/
+# Hand-authored fixtures are source-of-truth and must be tracked
+!data/raw/e03_medicare_appeals/
+!data/raw/e03_medicare_appeals/records.json
+!data/raw/e04_aca_appeals/
+!data/raw/e04_aca_appeals/records.json
 venv/
 __pycache__/
 *.pyc
